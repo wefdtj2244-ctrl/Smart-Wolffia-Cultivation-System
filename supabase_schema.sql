@@ -21,7 +21,17 @@ CREATE INDEX IF NOT EXISTS idx_wolffia_telemetry_created_at
 ON public.wolffia_telemetry (created_at DESC);
 
 -- 3. เปิดใช้งาน Supabase Realtime (WebSocket Streaming ไปยัง Dashboard)
-ALTER PUBLICATION supabase_realtime ADD TABLE public.wolffia_telemetry;
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_publication_tables 
+    WHERE pubname = 'supabase_realtime' 
+    AND schemaname = 'public' 
+    AND tablename = 'wolffia_telemetry'
+  ) THEN
+    ALTER PUBLICATION supabase_realtime ADD TABLE public.wolffia_telemetry;
+  END IF;
+END $$;
 
 -- 4. มอบสิทธิ์การอ่านและบันทึกข้อมูล (SELECT / INSERT) ให้ ESP32 และ Web Dashboard
 GRANT ALL ON TABLE public.wolffia_telemetry TO anon, authenticated, service_role;

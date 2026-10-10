@@ -16,6 +16,7 @@
  */
 
 #include <WiFi.h>
+#include <WiFiClientSecure.h>
 #include <HTTPClient.h>
 #include <OneWire.h>
 #include <DallasTemperature.h>
@@ -142,20 +143,33 @@ void loop() {
     // ส่งขึ้น Supabase REST API (ถ้า WiFi ต่อติด)
     // ============================================================================
     if (WiFi.status() == WL_CONNECTED) {
-      HTTPClient http;
-      http.begin(SUPABASE_URL);
-      http.addHeader("Content-Type", "application/json");
-      http.addHeader("apikey", SUPABASE_KEY);
-      http.addHeader("Authorization", String("Bearer ") + SUPABASE_KEY);
-      http.addHeader("Prefer", "return=minimal");
+      WiFiClientSecure client;
+      client.setInsecure(); // สำคัญมาก: ข้ามการตรวจ SSL Certificate เพื่อให้ ESP32 ยิงเข้า Supabase ได้ 100%
 
-      int httpResponseCode = http.POST(payload);
-      if (httpResponseCode >= 200 && httpResponseCode < 300) {
-        // สำเร็จ
+      HTTPClient http;
+      if (http.begin(client, SUPABASE_URL)) {
+        http.addHeader("Content-Type", "application/json");
+        http.addHeader("apikey", SUPABASE_KEY);
+        http.addHeader("Authorization", String("Bearer ") + SUPABASE_KEY);
+        http.addHeader("Prefer", "return=minimal");
+
+        int httpResponseCode = http.POST(payload);
+        if (httpResponseCode >= 200 && httpResponseCode < 300) {
+          Serial.printf("[Supabase Cloud] ✅ ซิงค์ข้อมูลขึ้นคลาวด์สำเร็จ! HTTP %d\n", httpResponseCode);
+        } else {
+          Serial.printf("[Supabase Cloud Error] ❌ Response: %d (%s)\n", 
+                        httpResponseCode, http.errorToString(httpResponseCode).c_str());
+        }
+        http.end();
       } else {
-        Serial.printf("[Supabase HTTP Error] Response code: %d\n", httpResponseCode);
+        Serial.println("[Supabase Error] ❌ ไม่สามารถสร้างการเชื่อมต่อ HTTPS Client ได้");
       }
-      http.end();
+    } else {
+      static unsigned long lastWifiWarn = 0;
+      if (millis() - lastWifiWarn > 10000) {
+        lastWifiWarn = millis();
+        Serial.println("[คำแนะนำ] WiFi ยังไม่เชื่อมต่อ -> กรุณาใส่ชื่อ WiFi และรหัสผ่าน หรือปิดหน้าต่าง Serial Monitor แล้วกดปุ่ม 'ต่อบอร์ด USB' บนเว็บแดชบอร์ด");
+      }
     }
   }
 }

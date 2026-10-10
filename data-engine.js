@@ -569,25 +569,23 @@
                 this.lastProcessedRowTime = latest.created_at;
                 this.handleIncomingTelemetryRow(latest);
               } else {
-                // If board hasn't sent a new row yet, apply tiny live heartbeat drift
-                this.applyLiveHeartbeatDrift();
+                const rowTime = new Date(latest.created_at).getTime();
+                this.isLiveFresh = (Date.now() - rowTime) < 15000;
                 this.notifyListeners();
               }
             } else {
               this.supabaseStatus = 'Connected (0 records)';
-              this.applyLiveHeartbeatDrift();
+              this.isLiveFresh = false;
               this.notifyListeners();
             }
           })
           .catch(err => {
             console.warn('[Supabase Live] fetch exception:', err);
             this.supabaseStatus = 'Network Error';
-            this.applyLiveHeartbeatDrift();
             this.notifyListeners();
           });
       } else {
         this.supabaseStatus = 'Not Configured';
-        this.applyLiveHeartbeatDrift();
         this.notifyListeners();
       }
     }

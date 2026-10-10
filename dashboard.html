@@ -179,6 +179,21 @@
               </a>
             </div>
           </div>
+        <!-- Live Hardware Telemetry Sync Banner -->
+        <div id="live-board-status-banner" style="background:#f0fdf4; border:1px solid #bbf7d0; border-left:4px solid #16a34a; border-radius:var(--radius-md); padding:0.75rem 1.25rem; margin-bottom:1.25rem; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.75rem">
+          <div style="display:flex; align-items:center; gap:0.6rem">
+            <span class="pulse-dot online" id="live-board-dot"></span>
+            <div>
+              <strong style="color:#166534; font-size:0.9rem" id="live-board-title">กำลังอ่านค่าสถานะจากบอร์ด ESP32...</strong>
+              <p style="margin:0; font-size:0.78rem; color:#15803d" id="live-board-subtitle">ช่องทาง: Supabase Cloud (WiFi) + Web Serial (USB)</p>
+            </div>
+          </div>
+          <div style="display:flex; gap:0.5rem; align-items:center">
+            <button type="button" class="btn btn-outline btn-sm" id="btn-banner-usb" onclick="toggleUsbSerialConnection()" style="font-size:0.78rem; padding:0.3rem 0.75rem">
+              <i class="fa-solid fa-microchip"></i> เสียบสาย USB อ่านค่าสด
+            </button>
+            <span id="live-board-last-time" style="font-size:0.75rem; color:#166534; font-weight:600"></span>
+          </div>
         </div>
 
         <!-- 4 Sensor Overview Cards -->
@@ -1501,9 +1516,9 @@
   <div class="toast-container" id="toast-container"></div>
 
   <!-- Scripts with cache busting query strings -->
-  <script src="db-config.js?v=20261010-03"></script>
-  <script src="data-engine.js?v=20261010-03"></script>
-  <script src="app.js?v=20261010-03"></script>
+  <script src="db-config.js?v=20261010-04"></script>
+  <script src="data-engine.js?v=20261010-04"></script>
+  <script src="app.js?v=20261010-04"></script>
 
   <!-- Inline Failsafe: Guarantees input values are always preserved and filled -->
   <script>

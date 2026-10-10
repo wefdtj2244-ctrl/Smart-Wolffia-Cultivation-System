@@ -255,6 +255,64 @@
       tableAlert.style.display = (engine.mode === 'LIVE' && engine.supabaseStatus === 'Needs Table') ? 'block' : 'none';
     }
 
+    // Live Board Hardware Telemetry Sync Banner
+    const banner = document.getElementById('live-board-status-banner');
+    const bTitle = document.getElementById('live-board-title');
+    const bSub = document.getElementById('live-board-subtitle');
+    const bDot = document.getElementById('live-board-dot');
+    const bLast = document.getElementById('live-board-last-time');
+    const btnUsb = document.getElementById('btn-banner-usb');
+
+    if (banner && bTitle) {
+      if (engine.mode === 'LIVE') {
+        banner.style.display = 'flex';
+        const isUsbActive = window.isUsbConnected && engine.lastSerialDataTime && (Date.now() - engine.lastSerialDataTime < 6000);
+        const lastPacketAge = c.timestamp ? (Date.now() - new Date(c.timestamp).getTime()) : 999999;
+        const isCloudActive = engine.isLiveFresh || (lastPacketAge < 15000);
+
+        if (isUsbActive) {
+          banner.style.background = '#f0fdf4';
+          banner.style.borderColor = '#bbf7d0';
+          banner.style.borderLeftColor = '#16a34a';
+          if (bDot) bDot.className = 'pulse-dot online';
+          bTitle.innerHTML = `<span style="color:#166534">🟢 รับข้อมูลสดจากบอร์ด ESP32 ผ่านสาย USB สำเร็จ!</span>`;
+          bSub.textContent = `พอร์ต USB Serial (115200 Baud) • อุณหภูมิ: ${c.temperature.toFixed(1)}°C | pH: ${c.ph.toFixed(2)} | ระดับน้ำ: ${c.waterLevel.toFixed(1)}% | แสง: ${c.light.toFixed(1)}%`;
+          if (bLast) bLast.textContent = `สด (USB)`;
+          if (btnUsb) {
+            btnUsb.innerHTML = '<i class="fa-solid fa-link-slash"></i> ตัดการเชื่อมต่อ USB';
+            btnUsb.className = 'btn btn-outline btn-sm';
+          }
+        } else if (isCloudActive) {
+          banner.style.background = '#f0fdf4';
+          banner.style.borderColor = '#bbf7d0';
+          banner.style.borderLeftColor = '#16a34a';
+          if (bDot) bDot.className = 'pulse-dot online';
+          bTitle.innerHTML = `<span style="color:#166534">🟢 รับข้อมูลสดจากบอร์ด ESP32 ผ่าน WiFi (Supabase Cloud) เรียลไทม์</span>`;
+          bSub.textContent = `อุปกรณ์: ${c.deviceId} • สัญญาณ: ${c.rssi} dBm • อัปเดตสดจาก Arduino IDE`;
+          if (bLast) bLast.textContent = `${new Date(c.timestamp).toLocaleTimeString('th-TH')}`;
+          if (btnUsb) {
+            btnUsb.innerHTML = '<i class="fa-solid fa-microchip"></i> สลับต่อสาย USB';
+            btnUsb.className = 'btn btn-outline btn-sm';
+          }
+        } else {
+          // Waiting for board
+          banner.style.background = '#fffbeb';
+          banner.style.borderColor = '#fde68a';
+          banner.style.borderLeftColor = '#f59e0b';
+          if (bDot) bDot.className = 'pulse-dot warning';
+          bTitle.innerHTML = `<span style="color:#92400e">🟡 กำลังรอข้อมูลจากบอร์ด ESP32... (ค่าล่าสุด: Temp ${c.temperature.toFixed(1)}°C, pH ${c.ph.toFixed(2)})</span>`;
+          bSub.innerHTML = `บอร์ดยังไม่ส่งข้อมูลใหม่: <strong>1. เสียบสาย USB แล้วกดปุ่ม 'ต่อบอร์ด USB'</strong> (ปิด Serial Monitor ใน Arduino ก่อน) หรือ <strong>2. ตรวจสอบชื่อ WiFi/Password ใน Arduino IDE</strong>`;
+          if (bLast) bLast.textContent = c.timestamp ? `ล่าสุดเมื่อ: ${new Date(c.timestamp).toLocaleTimeString('th-TH')}` : '';
+          if (btnUsb) {
+            btnUsb.innerHTML = '<i class="fa-solid fa-bolt"></i> กดเพื่อต่อบอร์ด USB เดี๋ยวนี้';
+            btnUsb.className = 'btn btn-primary btn-sm';
+          }
+        }
+      } else {
+        banner.style.display = 'none';
+      }
+    }
+
     // Cloud Sync Status
     const cloudStatus = document.getElementById('dash-cloud-status');
     if (cloudStatus) {
@@ -1105,7 +1163,17 @@ CREATE TABLE IF NOT EXISTS public.wolffia_telemetry (
 );
 
 -- 1. Enable Realtime Stream
-ALTER PUBLICATION supabase_realtime ADD TABLE public.wolffia_telemetry;
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_publication_tables 
+    WHERE pubname = 'supabase_realtime' 
+    AND schemaname = 'public' 
+    AND tablename = 'wolffia_telemetry'
+  ) THEN
+    ALTER PUBLICATION supabase_realtime ADD TABLE public.wolffia_telemetry;
+  END IF;
+END $$;
 
 -- 2. Grant permissions for ESP32 and Web App
 GRANT ALL ON TABLE public.wolffia_telemetry TO anon, authenticated, service_role;
@@ -1407,11 +1475,16 @@ ALTER TABLE public.wolffia_telemetry DISABLE ROW LEVEL SECURITY;`;
 
   window.toggleUsbSerialConnection = async function () {
     if (window.isUsbConnected) {
-      try {
-        if (usbSerialReader) await usbSerialReader.cancel();
-        if (usbSerialPort) await usbSerialPort.close();
-      } catch (e) {}
       window.isUsbConnected = false;
+      try {
+        if (usbSerialReader) {
+          await usbSerialReader.cancel();
+          usbSerialReader.releaseLock();
+        }
+        if (usbSerialPort) {
+          await usbSerialPort.close();
+        }
+      } catch (e) {}
       usbSerialPort = null;
       usbSerialReader = null;
       updateUsbButtonUI(false);
@@ -1420,7 +1493,7 @@ ALTER TABLE public.wolffia_telemetry DISABLE ROW LEVEL SECURITY;`;
     }
 
     if (!('serial' in navigator)) {
-      showToast('เบราว์เซอร์นี้ไม่รองรับ Web Serial API (แนะนำให้ใช้ Google Chrome หรือ Microsoft Edge บนคอมพิวเตอร์)', 'warning');
+      alert('เบราว์เซอร์นี้ไม่รองรับ Web Serial API\nกรุณาเปิดหน้านี้บนคอมพิวเตอร์ด้วย Google Chrome หรือ Microsoft Edge');
       return;
     }
 
@@ -1439,7 +1512,12 @@ ALTER TABLE public.wolffia_telemetry DISABLE ROW LEVEL SECURITY;`;
       readUsbSerialStream();
     } catch (err) {
       if (err.name !== 'NotFoundError') {
-        showToast('การเชื่อมต่อ USB ขัดข้อง: ' + err.message, 'error');
+        const msg = err.message || '';
+        if (msg.includes('Failed to open') || msg.includes('access') || msg.includes('busy') || msg.includes('already open')) {
+          alert('⚠️ ไม่สามารถเปิดพอร์ต USB ได้!\n\nสาเหตุ: หน้าต่าง Serial Monitor ในโปรแกรม Arduino IDE กำลังล็อกพอร์ตนี้อยู่\n\nวิธีแก้: กรุณา "ปิด (Close) หน้าต่าง Serial Monitor ใน Arduino IDE" ก่อน แล้วกดปุ่ม "ต่อบอร์ด USB" อีกครั้ง');
+        } else {
+          showToast('การเชื่อมต่อ USB ขัดข้อง: ' + msg, 'error');
+        }
       }
     }
   };
@@ -1465,35 +1543,44 @@ ALTER TABLE public.wolffia_telemetry DISABLE ROW LEVEL SECURITY;`;
   }
 
   async function readUsbSerialStream() {
+    const textDecoder = new TextDecoder();
+    let reader = null;
     let buffer = '';
-    while (usbSerialPort && usbSerialPort.readable && window.isUsbConnected) {
-      try {
-        const textDecoder = new TextDecoderStream();
-        const readableStreamClosed = usbSerialPort.readable.pipeTo(textDecoder.writable);
-        const reader = textDecoder.readable.getReader();
-        usbSerialReader = reader;
 
-        while (true) {
-          const { value, done } = await reader.read();
-          if (done) break;
-          if (value) {
-            buffer += value;
-            const lines = buffer.split('\n');
-            buffer = lines.pop();
-            for (const line of lines) {
-              const trimmed = line.trim();
-              if (trimmed) parseSerialTelemetryLine(trimmed);
+    try {
+      reader = usbSerialPort.readable.getReader();
+      usbSerialReader = reader;
+
+      while (window.isUsbConnected) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        if (value) {
+          buffer += textDecoder.decode(value, { stream: true });
+          const lines = buffer.split(/[\r\n]+/);
+          buffer = lines.pop(); // keep partial line in buffer
+
+          for (const line of lines) {
+            const trimmed = line.trim();
+            if (trimmed) {
+              parseSerialTelemetryLine(trimmed);
             }
           }
         }
-      } catch (err) {
-        console.warn('USB Serial stream error:', err);
-        break;
+      }
+    } catch (err) {
+      console.warn('USB Serial stream loop error:', err);
+    } finally {
+      if (reader) {
+        try { reader.releaseLock(); } catch(e) {}
       }
     }
+
     window.isUsbConnected = false;
     updateUsbButtonUI(false);
   }
+
+  let serialAccumulator = {};
+  let serialUploadTimeout = null;
 
   function parseSerialTelemetryLine(line) {
     if (!line) return;
@@ -1507,7 +1594,14 @@ ALTER TABLE public.wolffia_telemetry DISABLE ROW LEVEL SECURITY;`;
         const parsed = JSON.parse(jsonMatch[0]);
         engine.lastSerialDataTime = Date.now();
         engine.handleIncomingTelemetryRow(parsed);
-        engine.insertTelemetryRow(parsed);
+        
+        // Debounce cloud insert to save network
+        if (!serialUploadTimeout) {
+          serialUploadTimeout = setTimeout(() => {
+            engine.insertTelemetryRow(engine.current);
+            serialUploadTimeout = null;
+          }, 2000);
+        }
         return;
       }
 
@@ -1520,31 +1614,53 @@ ALTER TABLE public.wolffia_telemetry DISABLE ROW LEVEL SECURITY;`;
         }
       }
 
-      // 3. Key:Value Format: TEMP:28.5,PH:6.9,WATER:80,LIGHT:65,RSSI:-58
-      if (line.includes(':')) {
-        const parsed = {};
-        const parts = line.split(/[,;\t]/);
+      // 3. Key:Value or Key=Value Format (Single line or multi-pair)
+      if (line.includes(':') || line.includes('=')) {
+        const parts = line.split(/[,;\|\t]/);
+        let hasMatch = false;
+
         parts.forEach(p => {
-          const [k, v] = p.split(':').map(s => s.trim());
-          if (k && v) {
-            const num = parseFloat(v);
-            const lk = k.toLowerCase();
+          const pair = p.split(/[:=]/).map(s => s.trim());
+          if (pair.length >= 2) {
+            const k = pair[0].toLowerCase();
+            const rawVal = pair.slice(1).join(':').trim();
+            const numMatch = rawVal.match(/[-+]?\d*\.?\d+/);
+            const num = numMatch ? parseFloat(numMatch[0]) : NaN;
+
             if (!isNaN(num)) {
-              if (lk.includes('temp')) parsed.temperature = num;
-              else if (lk.includes('ph')) parsed.ph = num;
-              else if (lk.includes('water') || lk.includes('level')) parsed.water_level = num;
-              else if (lk.includes('light') || lk.includes('lux')) parsed.light = num;
-              else if (lk.includes('rssi')) parsed.rssi = parseInt(num);
+              if (k.includes('temp') || k.includes('อุณหภูมิ')) {
+                serialAccumulator.temperature = num;
+                hasMatch = true;
+              } else if (k.includes('ph') || k.includes('กรด')) {
+                serialAccumulator.ph = num;
+                hasMatch = true;
+              } else if (k.includes('water') || k.includes('level') || k.includes('น้ำ')) {
+                serialAccumulator.water_level = num;
+                hasMatch = true;
+              } else if (k.includes('light') || k.includes('lux') || k.includes('แสง')) {
+                serialAccumulator.light = num;
+                hasMatch = true;
+              } else if (k.includes('rssi')) {
+                serialAccumulator.rssi = parseInt(num);
+                hasMatch = true;
+              }
             } else {
-              if (lk.includes('device') || lk.includes('id')) parsed.device_id = v;
-              else if (lk.includes('status')) parsed.device_status = v;
+              if (k.includes('device') || k.includes('id')) serialAccumulator.device_id = rawVal;
+              else if (k.includes('status')) serialAccumulator.device_status = rawVal;
             }
           }
         });
-        if (Object.keys(parsed).length > 0) {
+
+        if (hasMatch) {
           engine.lastSerialDataTime = Date.now();
-          engine.handleIncomingTelemetryRow(parsed);
-          engine.insertTelemetryRow(parsed);
+          engine.handleIncomingTelemetryRow(serialAccumulator);
+          
+          if (!serialUploadTimeout) {
+            serialUploadTimeout = setTimeout(() => {
+              engine.insertTelemetryRow(engine.current);
+              serialUploadTimeout = null;
+            }, 2000);
+          }
         }
       }
     } catch (e) {
