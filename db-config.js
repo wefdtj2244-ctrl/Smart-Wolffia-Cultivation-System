@@ -8,9 +8,12 @@
 const DEFAULT_SUPABASE_URL = 'https://dtersefrvlbyocwozdab.supabase.co';
 const DEFAULT_SUPABASE_KEY = 'sb_publishable_zzcJS9T6nHg89bSF716qnw_ZeG6rQik';
 
+const storedUrl = (localStorage.getItem('wolffia_supabase_url') || '').trim().replace(/\/+$/, '');
+const storedKey = (localStorage.getItem('wolffia_supabase_key') || '').trim();
+
 const WOLFFIA_SUPABASE_CONFIG = {
-  url: localStorage.getItem('wolffia_supabase_url') || DEFAULT_SUPABASE_URL,
-  anonKey: localStorage.getItem('wolffia_supabase_key') || DEFAULT_SUPABASE_KEY,
+  url: storedUrl || DEFAULT_SUPABASE_URL,
+  anonKey: storedKey || DEFAULT_SUPABASE_KEY,
   table: 'wolffia_telemetry'
 };
 

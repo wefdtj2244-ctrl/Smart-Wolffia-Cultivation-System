@@ -143,6 +143,8 @@
         const merged = Object.assign({}, DEFAULT_DEVICE, parsed);
         if (!merged.supabaseUrl) merged.supabaseUrl = DEFAULT_DEVICE.supabaseUrl;
         if (!merged.supabaseKey) merged.supabaseKey = DEFAULT_DEVICE.supabaseKey;
+        if (merged.supabaseUrl) merged.supabaseUrl = merged.supabaseUrl.trim().replace(/\/+$/, '');
+        if (merged.supabaseKey) merged.supabaseKey = merged.supabaseKey.trim();
         return merged;
       } catch (e) {
         console.warn('Failed to parse saved device settings, using defaults.', e);
@@ -360,8 +362,8 @@
     // SUPABASE INTEGRATION & REALTIME TELEMETRY
     // ========================================================================
     initSupabase() {
-      const url = this.device.supabaseUrl || localStorage.getItem('wolffia_supabase_url');
-      const key = this.device.supabaseKey || localStorage.getItem('wolffia_supabase_key');
+      let url = (this.device.supabaseUrl || localStorage.getItem('wolffia_supabase_url') || DEFAULT_DEVICE.supabaseUrl || '').trim().replace(/\/+$/, '');
+      let key = (this.device.supabaseKey || localStorage.getItem('wolffia_supabase_key') || DEFAULT_DEVICE.supabaseKey || '').trim();
 
       if (!url || !key) {
         this.supabaseClient = null;
@@ -527,8 +529,8 @@
     }
 
     async testSupabaseConnection(overrideUrl, overrideKey) {
-      const url = overrideUrl || this.device.supabaseUrl || localStorage.getItem('wolffia_supabase_url');
-      const key = overrideKey || this.device.supabaseKey || localStorage.getItem('wolffia_supabase_key');
+      let url = (overrideUrl || this.device.supabaseUrl || localStorage.getItem('wolffia_supabase_url') || DEFAULT_DEVICE.supabaseUrl || '').trim().replace(/\/+$/, '');
+      let key = (overrideKey || this.device.supabaseKey || localStorage.getItem('wolffia_supabase_key') || DEFAULT_DEVICE.supabaseKey || '').trim();
 
       if (!url || !key) {
         return { success: false, message: 'กรุณากรอก Supabase URL และ Anon Key ให้ครบถ้วน' };
@@ -551,6 +553,25 @@
           .limit(1);
 
         if (error) {
+          const isTableMissing = error.code === 'PGRST205' || 
+            (error.message && (error.message.includes('Could not find the table') || error.message.includes('relation') || error.message.includes('schema cache')));
+
+          if (isTableMissing) {
+            this.supabaseClient = testClient;
+            window.supabaseClient = testClient;
+            this.supabaseStatus = 'Needs Table';
+            this.device.supabaseUrl = url;
+            this.device.supabaseKey = key;
+            localStorage.setItem('wolffia_supabase_url', url);
+            localStorage.setItem('wolffia_supabase_key', key);
+            this.saveDeviceSettings({ supabaseUrl: url, supabaseKey: key });
+
+            return {
+              success: true,
+              needsTable: true,
+              message: `✅ เชื่อมต่อ Supabase สำเร็จ! (URL & Key ถูกต้อง แต่ยังไม่พบตาราง '${tableName}' กรุณากดปุ่ม 'คัดลอก SQL' และ 'เปิด SQL Editor' เพื่อรันคำสั่ง)`
+            };
+          }
           return { success: false, message: `เชื่อมต่อไม่สำเร็จ: ${error.message} (Code: ${error.code || 'ERR'})` };
         }
 
@@ -567,7 +588,7 @@
         const recordCount = data ? data.length : 0;
         return {
           success: true,
-          message: `เชื่อมต่อ Supabase สำเร็จ! (พบตาราง '${tableName}', สถานะ: พร้อมรับส่งข้อมูล IoT Telemetry)`,
+          message: `✅ เชื่อมต่อ Supabase สำเร็จ! (พบตาราง '${tableName}', สถานะ: พร้อมรับส่งข้อมูล IoT Telemetry)`,
           data: data
         };
       } catch (err) {
@@ -598,6 +619,14 @@
       try {
         const { data, error } = await this.supabaseClient.from(tableName).insert([payload]).select();
         if (error) {
+          const isTableMissing = error.code === 'PGRST205' || 
+            (error.message && (error.message.includes('Could not find the table') || error.message.includes('schema cache')));
+          if (isTableMissing) {
+            return {
+              success: false,
+              message: `ยังไม่มีตาราง '${tableName}' ใน Supabase กรุณาคัดลอก SQL ไปรันใน Supabase SQL Editor ก่อน`
+            };
+          }
           return { success: false, message: `ส่งข้อมูลไม่สำเร็จ: ${error.message}` };
         }
         this.logActivity(`[Supabase Insert] ส่งข้อมูลเทเลเมทรีขึ้นคลาวด์สำเร็จ (${payload.temperature}°C, pH ${payload.ph})`, 'cloud');

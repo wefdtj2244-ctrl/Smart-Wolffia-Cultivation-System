@@ -101,6 +101,11 @@
     const main = document.querySelector('.dashboard-main');
     if (main) main.scrollTop = 0;
 
+    // If switching to settings, populate form safely once
+    if (viewName === 'settings' && window.WolffiaDataEngine) {
+      populateSettingsForm(window.WolffiaDataEngine);
+    }
+
     // Refresh specific view charts/tables if needed
     if (window.WolffiaDataEngine) {
       renderActiveView(window.WolffiaDataEngine);
@@ -203,7 +208,7 @@
         renderDeviceView(engine);
         break;
       case 'settings':
-        renderSettingsView(engine);
+        updateSettingsLiveStatus(engine);
         break;
     }
   }
@@ -777,46 +782,135 @@
   // ========================================================================
   // 11. SETTINGS VIEW
   // ========================================================================
-  function initSettingsForm() {
-    if (!window.WolffiaDataEngine) return;
-    renderSettingsView(window.WolffiaDataEngine);
-  }
-
-  function renderSettingsView(engine) {
-    const th = engine.thresholds;
-    const dev = engine.device;
-
-    setVal('cfg-temp-min', th.temp.min);
-    setVal('cfg-temp-max', th.temp.max);
-    setVal('cfg-ph-min', th.ph.min);
-    setVal('cfg-ph-max', th.ph.max);
-    setVal('cfg-water-min', th.waterLevel.min);
-    setVal('cfg-water-max', th.waterLevel.max);
-    setVal('cfg-light-min', th.light.min);
-    setVal('cfg-light-max', th.light.max);
-
-    setVal('cfg-device-id', dev.deviceId);
-    setVal('cfg-interval', dev.interval || 2500);
-    setVal('cfg-supabase-url', dev.supabaseUrl || localStorage.getItem('wolffia_supabase_url') || 'https://dtersefrvlbyocwozdab.supabase.co');
-    setVal('cfg-supabase-key', dev.supabaseKey || localStorage.getItem('wolffia_supabase_key') || 'sb_publishable_zzcJS9T6nHg89bSF716qnw_ZeG6rQik');
-    setVal('cfg-supabase-table', dev.supabaseTable || 'wolffia_telemetry');
-
-    // Update Supabase status badge
+  function updateSettingsLiveStatus(engine) {
+    if (!engine) return;
     const sbBadge = document.getElementById('cfg-supabase-status-badge');
     if (sbBadge) {
       const status = engine.supabaseStatus || 'Disconnected';
-      sbBadge.textContent = status === 'Connected' ? 'เชื่อมต่อแล้ว' : (status === 'Initialized' ? 'พร้อมเชื่อมต่อ' : status);
       if (status === 'Connected') {
+        sbBadge.textContent = 'เชื่อมต่อแล้ว (Connected)';
         sbBadge.style.background = '#dcfce7';
         sbBadge.style.color = '#15803d';
+      } else if (status === 'Needs Table') {
+        sbBadge.textContent = 'เชื่อมต่อแล้ว (รอสร้างตาราง SQL)';
+        sbBadge.style.background = '#fef3c7';
+        sbBadge.style.color = '#b45309';
       } else if (status === 'Initialized') {
+        sbBadge.textContent = 'พร้อมเชื่อมต่อ (Ready)';
         sbBadge.style.background = '#e0f2fe';
         sbBadge.style.color = '#0369a1';
       } else {
+        sbBadge.textContent = 'ไม่ได้เชื่อมต่อ';
         sbBadge.style.background = '#f1f5f9';
         sbBadge.style.color = '#64748b';
       }
     }
+  }
+
+  function populateSettingsForm(engine, force = false) {
+    if (!engine) return;
+    const th = engine.thresholds;
+    const dev = engine.device;
+
+    const setValSafe = (id, val) => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      if (!force && document.activeElement === el) return;
+      if (!force && el.value && el.value.trim() !== '') return;
+      el.value = val !== undefined && val !== null ? val : '';
+    };
+
+    setValSafe('cfg-temp-min', th.temp.min);
+    setValSafe('cfg-temp-max', th.temp.max);
+    setValSafe('cfg-ph-min', th.ph.min);
+    setValSafe('cfg-ph-max', th.ph.max);
+    setValSafe('cfg-water-min', th.waterLevel.min);
+    setValSafe('cfg-water-max', th.waterLevel.max);
+    setValSafe('cfg-light-min', th.light.min);
+    setValSafe('cfg-light-max', th.light.max);
+
+    setValSafe('cfg-device-id', dev.deviceId);
+    setValSafe('cfg-interval', dev.interval || 2500);
+
+    const defaultUrl = 'https://dtersefrvlbyocwozdab.supabase.co';
+    const defaultKey = 'sb_publishable_zzcJS9T6nHg89bSF716qnw_ZeG6rQik';
+    const effectiveUrl = (dev.supabaseUrl || localStorage.getItem('wolffia_supabase_url') || defaultUrl).trim().replace(/\/+$/, '');
+    const effectiveKey = (dev.supabaseKey || localStorage.getItem('wolffia_supabase_key') || defaultKey).trim();
+
+    setValSafe('cfg-supabase-url', effectiveUrl);
+    setValSafe('cfg-supabase-key', effectiveKey);
+    setValSafe('cfg-supabase-table', dev.supabaseTable || 'wolffia_telemetry');
+
+    updateSettingsLiveStatus(engine);
+  }
+
+  function setupSettingsAutoSave() {
+    const urlInput = document.getElementById('cfg-supabase-url');
+    const keyInput = document.getElementById('cfg-supabase-key');
+    const tableInput = document.getElementById('cfg-supabase-table');
+
+    if (urlInput) {
+      urlInput.addEventListener('input', () => {
+        const val = urlInput.value.trim().replace(/\/+$/, '');
+        if (val) {
+          localStorage.setItem('wolffia_supabase_url', val);
+          if (window.WolffiaDataEngine) {
+            window.WolffiaDataEngine.device.supabaseUrl = val;
+          }
+        }
+      });
+    }
+
+    if (keyInput) {
+      keyInput.addEventListener('input', () => {
+        const val = keyInput.value.trim();
+        if (val) {
+          localStorage.setItem('wolffia_supabase_key', val);
+          if (window.WolffiaDataEngine) {
+            window.WolffiaDataEngine.device.supabaseKey = val;
+          }
+        }
+      });
+    }
+
+    if (tableInput) {
+      tableInput.addEventListener('input', () => {
+        const val = tableInput.value.trim();
+        if (val && window.WolffiaDataEngine) {
+          window.WolffiaDataEngine.device.supabaseTable = val;
+        }
+      });
+    }
+  }
+
+  window.toggleKeyVisibility = function () {
+    const input = document.getElementById('cfg-supabase-key');
+    const icon = document.getElementById('icon-toggle-key');
+    if (!input) return;
+    if (input.type === 'password') {
+      input.type = 'text';
+      if (icon) {
+        icon.classList.remove('fa-eye');
+        icon.classList.add('fa-eye-slash');
+      }
+    } else {
+      input.type = 'password';
+      if (icon) {
+        icon.classList.remove('fa-eye-slash');
+        icon.classList.add('fa-eye');
+      }
+    }
+  };
+
+  function initSettingsForm() {
+    if (!window.WolffiaDataEngine) return;
+    populateSettingsForm(window.WolffiaDataEngine, false);
+    setupSettingsAutoSave();
+  }
+
+  // Alias for compatibility
+  function renderSettingsView(engine) {
+    updateSettingsLiveStatus(engine);
   }
 
   window.saveSystemSettings = function () {
@@ -846,7 +940,7 @@
       }
     };
 
-    const url = (document.getElementById('cfg-supabase-url')?.value || '').trim();
+    const url = (document.getElementById('cfg-supabase-url')?.value || '').trim().replace(/\/+$/, '');
     const key = (document.getElementById('cfg-supabase-key')?.value || '').trim();
     const table = (document.getElementById('cfg-supabase-table')?.value || 'wolffia_telemetry').trim();
 
@@ -861,8 +955,11 @@
     engine.saveThresholds(newThresholds);
     engine.saveDeviceSettings(newDevice);
 
-    renderSettingsView(engine);
-    showToast('บันทึกการตั้งค่าเกณฑ์เซนเซอร์และพารามิเตอร์เรียบร้อยแล้ว!', 'success');
+    if (url) localStorage.setItem('wolffia_supabase_url', url);
+    if (key) localStorage.setItem('wolffia_supabase_key', key);
+
+    updateSettingsLiveStatus(engine);
+    showToast('บันทึกการตั้งค่าเกณฑ์เซนเซอร์และการเชื่อมต่อ Supabase เรียบร้อยแล้ว!', 'success');
   };
 
   window.testSupabaseConnection = async function () {
@@ -875,7 +972,7 @@
       btn.disabled = true;
     }
 
-    const url = (document.getElementById('cfg-supabase-url')?.value || '').trim();
+    const url = (document.getElementById('cfg-supabase-url')?.value || '').trim().replace(/\/+$/, '');
     const key = (document.getElementById('cfg-supabase-key')?.value || '').trim();
     const table = (document.getElementById('cfg-supabase-table')?.value || 'wolffia_telemetry').trim();
 
@@ -889,12 +986,12 @@
     }
 
     if (result.success) {
-      showToast(result.message, 'success');
+      showToast(result.message, result.needsTable ? 'info' : 'success');
     } else {
       showToast(result.message, 'error');
     }
 
-    renderSettingsView(engine);
+    updateSettingsLiveStatus(engine);
   };
 
   window.sendSampleTelemetryToSupabase = async function () {

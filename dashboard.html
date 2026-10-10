@@ -1380,7 +1380,12 @@
 
               <div style="margin-bottom:1rem">
                 <label style="font-size:0.85rem; font-weight:600; display:block; margin-bottom:0.35rem">Supabase Anon Key</label>
-                <input type="password" id="cfg-supabase-key" class="form-input" style="width:100%" value="sb_publishable_zzcJS9T6nHg89bSF716qnw_ZeG6rQik" placeholder="sb_publishable_zzcJS9T6nHg89bSF716qnw_ZeG6rQik">
+                <div style="position:relative">
+                  <input type="password" id="cfg-supabase-key" class="form-input" style="width:100%; padding-right:2.5rem" value="sb_publishable_zzcJS9T6nHg89bSF716qnw_ZeG6rQik" placeholder="sb_publishable_zzcJS9T6nHg89bSF716qnw_ZeG6rQik">
+                  <button type="button" onclick="toggleKeyVisibility()" style="position:absolute; right:0.5rem; top:50%; transform:translateY(-50%); background:none; border:none; cursor:pointer; color:var(--text-muted); padding:0.25rem 0.5rem;" title="แสดง/ซ่อนคีย์">
+                    <i class="fa-solid fa-eye" id="icon-toggle-key"></i>
+                  </button>
+                </div>
               </div>
 
               <div style="margin-bottom:1.25rem">
@@ -1400,11 +1405,16 @@
 
               <!-- SQL Schema Snippet Box -->
               <div style="background:var(--bg-surface-subtle); border:1px solid var(--border-color); border-radius:var(--radius-md); padding:0.85rem 1rem; margin-bottom:1.25rem">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem; flex-wrap:wrap; gap:0.5rem">
                   <span style="font-weight:600; font-size:0.82rem; color:var(--text-main)"><i class="fa-solid fa-database" style="color:var(--color-info)"></i> สคริปต์ SQL สำหรับสร้างตาราง</span>
-                  <button type="button" class="btn btn-outline btn-sm" onclick="copySupabaseSqlScript()" style="padding:0.2rem 0.6rem; font-size:0.75rem">
-                    <i class="fa-solid fa-copy"></i> คัดลอก SQL
-                  </button>
+                  <div style="display:flex; gap:0.5rem">
+                    <button type="button" class="btn btn-outline btn-sm" onclick="copySupabaseSqlScript()" style="padding:0.2rem 0.6rem; font-size:0.75rem">
+                      <i class="fa-solid fa-copy"></i> คัดลอก SQL
+                    </button>
+                    <a href="https://supabase.com/dashboard/project/dtersefrvlbyocwozdab/sql/new" target="_blank" rel="noopener noreferrer" class="btn btn-primary btn-sm" style="padding:0.2rem 0.6rem; font-size:0.75rem; text-decoration:none; display:inline-flex; align-items:center; gap:0.25rem">
+                      <i class="fa-solid fa-arrow-up-right-from-square"></i> เปิด SQL Editor
+                    </a>
+                  </div>
                 </div>
                 <p style="font-size:0.75rem; color:var(--text-muted); margin:0; line-height:1.4">
                   นำไปรันใน <strong>Supabase SQL Editor</strong> เพื่อสร้างตาราง <code>wolffia_telemetry</code> พร้อมเปิด Realtime และ RLS Policy ได้ทันที
