@@ -1604,10 +1604,25 @@ GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO anon, authenticated, se
     } catch (err) {
       if (err.name !== 'NotFoundError') {
         const msg = err.message || '';
-        if (msg.includes('Failed to open') || msg.includes('access') || msg.includes('busy') || msg.includes('already open')) {
-          alert('⚠️ ไม่สามารถเปิดพอร์ต USB ได้!\n\nสาเหตุ: หน้าต่าง Serial Monitor ในโปรแกรม Arduino IDE กำลังล็อกพอร์ตนี้อยู่\n\nวิธีแก้: กรุณา "ปิด (Close) หน้าต่าง Serial Monitor ใน Arduino IDE" ก่อน แล้วกดปุ่ม "ต่อบอร์ด USB" อีกครั้ง');
+        console.warn('Web Serial connection error:', err);
+        if (msg.includes('Failed to open') || msg.includes('access') || msg.includes('busy') || msg.includes('already open') || msg.includes('in use') || err.name === 'NetworkError') {
+          const engine = window.WolffiaDataEngine;
+          const isWifiOnline = engine && engine.mode === 'LIVE' && engine.current && engine.current.timestamp && (Date.now() - new Date(engine.current.timestamp).getTime() < 180000);
+          
+          let alertMsg = '⚠️ ไม่สามารถเปิดพอร์ต USB Serial ได้!\n' +
+            'ข้อความจากเบราว์เซอร์: ' + (msg || err.name) + '\n\n' +
+            '📌 สาเหตุที่พอร์ต USB ติดสถานะไม่ว่าง (Busy / Locked):\n' +
+            '1. โปรแกรม Arduino IDE ยังเปิดอยู่ (ใน Arduino IDE เวอร์ชัน 2.x แม้จะไม่ได้เปิดหน้าต่าง Serial Monitor แต่ตัวโปรแกรมจะจองพอร์ตไว้เบื้องหลัง -> วิธีแก้: ปิดหน้าต่างโปรแกรม Arduino IDE ทั้งหมด)\n' +
+            '2. มีแท็บเบราว์เซอร์อื่นเปิดใช้งานพอร์ตนี้อยู่ (เช่น แท็บทดสอบในเครื่อง)\n' +
+            '3. พอร์ตไดรเวอร์ใน Windows ค้าง -> วิธีแก้: ให้ถอดสาย USB ออกแล้วเสียบใหม่อีกครั้ง\n';
+
+          if (isWifiOnline) {
+            alertMsg += '\n🎉 หมายเหตุ: ขณะนี้บอร์ด ESP32 ของคุณส่งข้อมูลผ่าน WiFi ได้สมบูรณ์แล้ว (แถบสีเขียวบนหน้าจอ) ค่าทุกอย่างบนแดชบอร์ดกำลังอัปเดตแบบเรียลไทม์อยู่แล้ว จึงไม่จำเป็นต้องต่อสาย USB ก็ใช้งานได้ตามปกติครับ!';
+          }
+
+          alert(alertMsg);
         } else {
-          showToast('การเชื่อมต่อ USB ขัดข้อง: ' + msg, 'error');
+          showToast('การเชื่อมต่อ USB ขัดข้อง: ' + (msg || err.name), 'error');
         }
       }
     }
