@@ -368,6 +368,33 @@
                   <span id="dash-cloud-status">เชื่อมต่อพร้อมรับส่งข้อมูล</span>
                 </div>
               </div>
+              <div class="status-row-item">
+                <div class="status-row-left">
+                  <i class="fa-solid fa-water" style="color:#0284c7"></i>
+                  <span>ปั๊มน้ำหมุนเวียน (Water Pump Relay)</span>
+                </div>
+                <div class="status-row-right">
+                  <span class="status-badge normal" id="dash-pump-status" style="font-size:0.75rem">หยุดทำงาน (OFF)</span>
+                </div>
+              </div>
+              <div class="status-row-item">
+                <div class="status-row-left">
+                  <i class="fa-solid fa-sliders" style="color:#10b981"></i>
+                  <span>โหมดการทำงานของบอร์ด (System Mode)</span>
+                </div>
+                <div class="status-row-right">
+                  <span class="status-badge normal" id="dash-mode-status" style="font-size:0.75rem">AUTO</span>
+                </div>
+              </div>
+              <div class="status-row-item">
+                <div class="status-row-left">
+                  <i class="fa-solid fa-shield-halved" style="color:#f59e0b"></i>
+                  <span>สถานะความปลอดภัย (Safety Health)</span>
+                </div>
+                <div class="status-row-right">
+                  <span class="status-badge normal" id="dash-health-status" style="font-size:0.75rem">NORMAL</span>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -1469,7 +1496,7 @@
 
               <div style="margin-bottom:1.25rem">
                 <label style="font-size:0.85rem; font-weight:600; display:block; margin-bottom:0.35rem">ชื่อตาราง Supabase (Table Name)</label>
-                <input type="text" id="cfg-supabase-table" class="form-input" style="width:100%" value="wolffia_telemetry" required>
+                <input type="text" id="cfg-supabase-table" class="form-input" style="width:100%" value="sensor_readings" required>
               </div>
 
               <!-- Action Buttons for Supabase Testing -->
@@ -1496,7 +1523,7 @@
                   </div>
                 </div>
                 <p style="font-size:0.75rem; color:var(--text-muted); margin:0; line-height:1.4">
-                  นำไปรันใน <strong>Supabase SQL Editor</strong> เพื่อสร้างตาราง <code>wolffia_telemetry</code> พร้อมเปิด Realtime และ RLS Policy ได้ทันที
+                  นำไปรันใน <strong>Supabase SQL Editor</strong> เพื่อสร้างตาราง <code>sensor_readings</code> (และ <code>wolffia_telemetry</code>) พร้อมเปิด Realtime และ RLS Policy ได้ทันที
                 </p>
               </div>
 
@@ -1518,9 +1545,9 @@
   <div class="toast-container" id="toast-container"></div>
 
   <!-- Scripts with cache busting query strings -->
-  <script src="db-config.js?v=20261010-05"></script>
-  <script src="data-engine.js?v=20261010-05"></script>
-  <script src="app.js?v=20261010-05"></script>
+  <script src="db-config.js?v=20261010-06"></script>
+  <script src="data-engine.js?v=20261010-06"></script>
+  <script src="app.js?v=20261010-06"></script>
 
   <!-- Inline Failsafe: Guarantees input values are always preserved and filled -->
   <script>
@@ -1540,7 +1567,7 @@
           k.value = savedK || defK;
         }
         if (t && (!t.value || t.value.trim() === '')) {
-          t.value = 'wolffia_telemetry';
+          t.value = 'sensor_readings';
         }
       }
       if (document.readyState === 'loading') {

@@ -37,7 +37,8 @@ const storedKey = (localStorage.getItem('wolffia_supabase_key') || '').trim();
 const WOLFFIA_SUPABASE_CONFIG = {
   url: storedUrl || DEFAULT_SUPABASE_URL,
   anonKey: storedKey || DEFAULT_SUPABASE_KEY,
-  table: 'wolffia_telemetry'
+  table: 'sensor_readings',
+  fallbackTable: 'wolffia_telemetry'
 };
 
 /**

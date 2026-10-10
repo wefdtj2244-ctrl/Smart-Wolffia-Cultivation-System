@@ -239,14 +239,37 @@
     setTrendElem('dash-water-trend', tr.waterLevel);
     setTrendElem('dash-light-trend', tr.light);
 
-    // System Status Card
+    // Light unit dynamically switches to 'lux' if readings exceed 100
+    const lightUnitEl = document.getElementById('dash-light-unit');
+    if (lightUnitEl) {
+      lightUnitEl.textContent = (c.light > 100) ? 'lux' : '%';
+    }
+
+    // System Status Card (Matching ESP32 Firmware V6)
     setText('dash-wifi-text', `${engine.device.wifiSsid} (${c.rssi} dBm)`);
-    setText('dash-telemetry-rate', `ความถี่ ${engine.device.interval ? (engine.device.interval / 1000).toFixed(1) : '2.5'}s`);
+    setText('dash-telemetry-rate', `ความถี่ ${engine.device.interval ? (engine.device.interval / 1000).toFixed(1) : '5.0'}s`);
     const telemetryBadge = document.getElementById('dash-telemetry-badge');
     if (telemetryBadge) {
-      telemetryBadge.textContent = 'ปกติ';
-      telemetryBadge.style.background = '#dcfce7';
-      telemetryBadge.style.color = '#15803d';
+      telemetryBadge.textContent = c.systemStatus || 'ปกติ';
+      telemetryBadge.style.background = (c.systemStatus === 'EMERGENCY_STOP') ? '#fee2e2' : '#dcfce7';
+      telemetryBadge.style.color = (c.systemStatus === 'EMERGENCY_STOP') ? '#b91c1c' : '#15803d';
+    }
+
+    // Pump & Automation Status
+    const pumpStatusEl = document.getElementById('dash-pump-status');
+    if (pumpStatusEl) {
+      pumpStatusEl.textContent = c.pumpStatus ? 'กำลังทำงาน (ON)' : 'หยุดทำงาน (OFF)';
+      pumpStatusEl.className = 'status-badge ' + (c.pumpStatus ? 'normal' : 'muted');
+    }
+    const modeStatusEl = document.getElementById('dash-mode-status');
+    if (modeStatusEl) {
+      modeStatusEl.textContent = c.systemMode || 'AUTO';
+      modeStatusEl.className = 'status-badge ' + (c.systemMode === 'AUTO' ? 'normal' : 'warning');
+    }
+    const healthStatusEl = document.getElementById('dash-health-status');
+    if (healthStatusEl) {
+      healthStatusEl.textContent = c.systemStatus || 'NORMAL';
+      healthStatusEl.className = 'status-badge ' + (c.systemStatus === 'NORMAL' ? 'normal' : 'danger');
     }
 
     // Live Missing Table Alert Banner
@@ -266,9 +289,10 @@
     if (banner && bTitle) {
       if (engine.mode === 'LIVE') {
         banner.style.display = 'flex';
-        const isUsbActive = window.isUsbConnected && engine.lastSerialDataTime && (Date.now() - engine.lastSerialDataTime < 6000);
+        const isUsbActive = window.isUsbConnected && engine.lastSerialDataTime && (Date.now() - engine.lastSerialDataTime < 7000);
         const lastPacketAge = c.timestamp ? (Date.now() - new Date(c.timestamp).getTime()) : 999999;
-        const isCloudActive = engine.isLiveFresh || (lastPacketAge < 15000);
+        // ESP32 V6 firmware sends to Supabase Cloud every 60 seconds (SUPABASE_INTERVAL_MS = 60000UL)
+        const isCloudActive = engine.isLiveFresh || (lastPacketAge < 90000);
 
         if (isUsbActive) {
           banner.style.background = '#f0fdf4';
@@ -276,7 +300,7 @@
           banner.style.borderLeftColor = '#16a34a';
           if (bDot) bDot.className = 'pulse-dot online';
           bTitle.innerHTML = `<span style="color:#166534">🟢 รับข้อมูลสดจากบอร์ด ESP32 ผ่านสาย USB สำเร็จ!</span>`;
-          bSub.textContent = `พอร์ต USB Serial (115200 Baud) • อุณหภูมิ: ${c.temperature.toFixed(1)}°C | pH: ${c.ph.toFixed(2)} | ระดับน้ำ: ${c.waterLevel.toFixed(1)}% | แสง: ${c.light.toFixed(1)}%`;
+          bSub.textContent = `พอร์ต USB Serial (115200 Baud) • Temp: ${c.temperature.toFixed(1)}°C | pH: ${c.ph.toFixed(2)} | น้ำ: ${c.waterLevel.toFixed(1)}% | แสง: ${c.light.toFixed(1)}${c.light > 100 ? ' lx' : '%'} | ปั๊ม: ${c.pumpStatus ? 'ON' : 'OFF'} | โหมด: ${c.systemMode || 'AUTO'}`;
           if (bLast) bLast.textContent = `สด (USB)`;
           if (btnUsb) {
             btnUsb.innerHTML = '<i class="fa-solid fa-link-slash"></i> ตัดการเชื่อมต่อ USB';
@@ -288,7 +312,7 @@
           banner.style.borderLeftColor = '#16a34a';
           if (bDot) bDot.className = 'pulse-dot online';
           bTitle.innerHTML = `<span style="color:#166534">🟢 รับข้อมูลสดจากบอร์ด ESP32 ผ่าน WiFi (Supabase Cloud) เรียลไทม์</span>`;
-          bSub.textContent = `อุปกรณ์: ${c.deviceId} • สัญญาณ: ${c.rssi} dBm • อัปเดตสดจาก Arduino IDE`;
+          bSub.textContent = `อุปกรณ์: ${c.deviceId} • WiFi: ${engine.device.wifiSsid} (${c.rssi} dBm) • ปั๊ม: ${c.pumpStatus ? 'ON' : 'OFF'} • โหมด: ${c.systemMode || 'AUTO'} • อัปเดตสดจาก Arduino`;
           if (bLast) bLast.textContent = `${new Date(c.timestamp).toLocaleTimeString('th-TH')}`;
           if (btnUsb) {
             btnUsb.innerHTML = '<i class="fa-solid fa-microchip"></i> สลับต่อสาย USB';
@@ -1149,38 +1173,59 @@
   };
 
   window.copySupabaseSqlScript = function () {
-    const sql = `-- Smart Wolffia Cultivation System (V3.0.1) Telemetry Schema
+    const sql = `-- Smart Wolffia Cultivation System - Complete SQL Schema for Supabase
+-- 1. Table for ESP32 Firmware V6 (Target Table: sensor_readings)
+CREATE TABLE IF NOT EXISTS public.sensor_readings (
+  id BIGINT GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
+  created_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL,
+  device_id TEXT DEFAULT 'ESP32-WOLFFIA-01' NOT NULL,
+  temperature NUMERIC(5, 2),
+  ph NUMERIC(4, 2),
+  light NUMERIC(8, 2),
+  water_level NUMERIC(5, 1),
+  pump_status BOOLEAN DEFAULT false,
+  system_mode TEXT DEFAULT 'AUTO',
+  system_status TEXT DEFAULT 'NORMAL'
+);
+
+-- 2. Fallback Table: wolffia_telemetry
 CREATE TABLE IF NOT EXISTS public.wolffia_telemetry (
   id BIGINT GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
   created_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL,
   device_id TEXT DEFAULT 'ESP32-WOLFFIA-01' NOT NULL,
-  temperature NUMERIC(4, 2) NOT NULL,
-  ph NUMERIC(3, 2) NOT NULL,
-  water_level NUMERIC(4, 1) NOT NULL,
-  light NUMERIC(4, 1) NOT NULL,
+  temperature NUMERIC(5, 2) NOT NULL,
+  ph NUMERIC(4, 2) NOT NULL,
+  water_level NUMERIC(5, 1) NOT NULL,
+  light NUMERIC(6, 1) NOT NULL,
   rssi INTEGER DEFAULT -58,
   device_status TEXT DEFAULT 'Online'
 );
 
--- 1. Enable Realtime Stream
+-- 3. Enable Realtime Stream for both tables
 DO $$
 BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM pg_publication_tables 
-    WHERE pubname = 'supabase_realtime' 
-    AND schemaname = 'public' 
-    AND tablename = 'wolffia_telemetry'
+    WHERE pubname = 'supabase_realtime' AND schemaname = 'public' AND tablename = 'sensor_readings'
+  ) THEN
+    ALTER PUBLICATION supabase_realtime ADD TABLE public.sensor_readings;
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_publication_tables 
+    WHERE pubname = 'supabase_realtime' AND schemaname = 'public' AND tablename = 'wolffia_telemetry'
   ) THEN
     ALTER PUBLICATION supabase_realtime ADD TABLE public.wolffia_telemetry;
   END IF;
 END $$;
 
--- 2. Grant permissions for ESP32 and Web App
-GRANT ALL ON TABLE public.wolffia_telemetry TO anon, authenticated, service_role;
-GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO anon, authenticated, service_role;
+-- 4. Disable RLS to allow direct IoT posting from ESP32 (Prevents 401 Unauthorized)
+ALTER TABLE public.sensor_readings DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.wolffia_telemetry DISABLE ROW LEVEL SECURITY;
 
--- 3. Unlock RLS for IoT Telemetry table
-ALTER TABLE public.wolffia_telemetry DISABLE ROW LEVEL SECURITY;`;
+GRANT ALL ON TABLE public.sensor_readings TO anon, authenticated, service_role;
+GRANT ALL ON TABLE public.wolffia_telemetry TO anon, authenticated, service_role;
+GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO anon, authenticated, service_role;`;
 
     if (navigator.clipboard && navigator.clipboard.writeText) {
       navigator.clipboard.writeText(sql).then(() => {
@@ -1588,36 +1633,77 @@ ALTER TABLE public.wolffia_telemetry DISABLE ROW LEVEL SECURITY;`;
     if (!engine) return;
 
     try {
-      // 1. JSON Format: {"device_id":"ESP32-WOLFFIA-01","temperature":28.5,"ph":6.9,"water_level":80,"light":65,"rssi":-58}
+      // 1. Exact Match for ESP32 Firmware V6 Serial Output:
+      // "SENSOR | pH=7.15 | Temp=28.50 C | Light=1200.00 lux | Water=85.0%"
+      const sensorV6Match = line.match(/SENSOR\s*\|\s*pH=([-+]?\d*\.?\d+)\s*\|\s*Temp=([-+]?\d*\.?\d+)\s*C\s*\|\s*Light=([-+]?\d*\.?\d+)\s*lux\s*\|\s*Water=([-+]?\d*\.?\d+)%/i);
+      if (sensorV6Match) {
+        const phRaw = parseFloat(sensorV6Match[1]);
+        const tempRaw = parseFloat(sensorV6Match[2]);
+        const lightRaw = parseFloat(sensorV6Match[3]);
+        const waterRaw = parseFloat(sensorV6Match[4]);
+
+        const packet = {
+          device_id: 'ESP32-WOLFFIA-01',
+          ph: (phRaw >= 0 && phRaw <= 14) ? phRaw : undefined,
+          temperature: (tempRaw > -40 && tempRaw < 100) ? tempRaw : undefined,
+          light: (lightRaw >= 0) ? lightRaw : undefined,
+          water_level: (waterRaw >= 0 && waterRaw <= 100) ? waterRaw : undefined,
+          created_at: new Date().toISOString()
+        };
+
+        engine.lastSerialDataTime = Date.now();
+        engine.handleIncomingTelemetryRow(packet);
+
+        // Debounce cloud insert to save network
+        if (!serialUploadTimeout) {
+          serialUploadTimeout = setTimeout(() => {
+            engine.insertTelemetryRow(engine.current);
+            serialUploadTimeout = null;
+          }, 3000);
+        }
+        return;
+      }
+
+      // 2. Pump Status from ESP32: "Pump: ON" or "Pump: OFF"
+      const pumpMatch = line.match(/Pump:\s*(ON|OFF)/i);
+      if (pumpMatch) {
+        const isOn = pumpMatch[1].toUpperCase() === 'ON';
+        engine.current.pumpStatus = isOn;
+        engine.lastSerialDataTime = Date.now();
+        engine.notifyListeners();
+        return;
+      }
+
+      // 3. JSON Format: {"device_id":"ESP32-WOLFFIA-01", ...}
       const jsonMatch = line.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
         const parsed = JSON.parse(jsonMatch[0]);
         engine.lastSerialDataTime = Date.now();
         engine.handleIncomingTelemetryRow(parsed);
         
-        // Debounce cloud insert to save network
         if (!serialUploadTimeout) {
           serialUploadTimeout = setTimeout(() => {
             engine.insertTelemetryRow(engine.current);
             serialUploadTimeout = null;
-          }, 2000);
+          }, 3000);
         }
         return;
       }
 
-      // 2. IP Address / WiFi log from ESP32 boot
-      if (line.includes('IP:')) {
-        const ipMatch = line.match(/\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b/);
-        if (ipMatch) {
-          engine.device.ipAddress = ipMatch[0];
-          engine.notifyListeners();
-        }
+      // 4. IP Address / WiFi log from ESP32 boot
+      const ipMatch = line.match(/(?:IP\s*address|Dashboard:\s*http:\/\/|IP):\s*([0-9.]+)/i);
+      if (ipMatch) {
+        engine.device.ipAddress = ipMatch[1];
+        engine.device.wifiStatus = 'Connected';
+        engine.notifyListeners();
+        return;
       }
 
-      // 3. Key:Value or Key=Value Format (Single line or multi-pair)
+      // 5. Key:Value or Key=Value Format (Single line or multi-pair)
       if (line.includes(':') || line.includes('=')) {
         const parts = line.split(/[,;\|\t]/);
         let hasMatch = false;
+        let lineData = {};
 
         parts.forEach(p => {
           const pair = p.split(/[:=]/).map(s => s.trim());
@@ -1629,37 +1715,34 @@ ALTER TABLE public.wolffia_telemetry DISABLE ROW LEVEL SECURITY;`;
 
             if (!isNaN(num)) {
               if (k.includes('temp') || k.includes('อุณหภูมิ')) {
-                serialAccumulator.temperature = num;
-                hasMatch = true;
+                if (num > -40 && num < 100) { lineData.temperature = num; hasMatch = true; }
               } else if (k.includes('ph') || k.includes('กรด')) {
-                serialAccumulator.ph = num;
-                hasMatch = true;
+                if (num >= 0 && num <= 14) { lineData.ph = num; hasMatch = true; }
               } else if (k.includes('water') || k.includes('level') || k.includes('น้ำ')) {
-                serialAccumulator.water_level = num;
-                hasMatch = true;
+                if (num >= 0 && num <= 100) { lineData.water_level = num; hasMatch = true; }
               } else if (k.includes('light') || k.includes('lux') || k.includes('แสง')) {
-                serialAccumulator.light = num;
-                hasMatch = true;
+                if (num >= 0) { lineData.light = num; hasMatch = true; }
               } else if (k.includes('rssi')) {
-                serialAccumulator.rssi = parseInt(num);
+                lineData.rssi = parseInt(num);
                 hasMatch = true;
               }
             } else {
-              if (k.includes('device') || k.includes('id')) serialAccumulator.device_id = rawVal;
-              else if (k.includes('status')) serialAccumulator.device_status = rawVal;
+              if (k.includes('device') || k.includes('id')) lineData.device_id = rawVal;
+              else if (k.includes('mode')) lineData.system_mode = rawVal.toUpperCase();
+              else if (k.includes('status')) lineData.system_status = rawVal;
             }
           }
         });
 
         if (hasMatch) {
           engine.lastSerialDataTime = Date.now();
-          engine.handleIncomingTelemetryRow(serialAccumulator);
+          engine.handleIncomingTelemetryRow(lineData);
           
           if (!serialUploadTimeout) {
             serialUploadTimeout = setTimeout(() => {
               engine.insertTelemetryRow(engine.current);
               serialUploadTimeout = null;
-            }, 2000);
+            }, 3000);
           }
         }
       }

@@ -34,17 +34,18 @@
   const DEFAULT_DEVICE = {
     deviceId: 'ESP32-WOLFFIA-01',
     board: 'ESP32-WROOM-32D (Dual-Core 240MHz)',
-    firmwareVersion: 'v3.0.1-prod (ESP-IDF 5.1)',
+    firmwareVersion: 'SMART WOLFFIA FARM - V6',
     macAddress: '24:6F:28:7A:B1:0C',
     ipAddress: '192.168.1.145',
-    wifiSsid: 'SmartAgri_Wolffia_IoT',
+    wifiSsid: 'Home 96_2.4G',
     rssi: -58,
     ping: 24,
     uptimeStart: Date.now() - (14 * 24 * 3600 * 1000 + 6 * 3600 * 1000 + 32 * 60 * 1000), // ~14d 6h 32m
-    interval: 2500, // ms
+    interval: 5000, // ms (5s sensor loop in ESP32 V6)
     supabaseUrl: 'https://dtersefrvlbyocwozdab.supabase.co',
     supabaseKey: 'sb_publishable_zzcJS9T6nHg89bSF716qnw_ZeG6rQik',
-    supabaseTable: 'wolffia_telemetry'
+    supabaseTable: 'sensor_readings',
+    fallbackTable: 'wolffia_telemetry'
   };
 
   class CentralDataEngine {
@@ -60,13 +61,16 @@
       this.supabaseStatus = 'Disconnected';
       this.liveSubscription = null;
 
-      // Realtime State
+      // Realtime State matching ESP32 V6
       this.current = {
         deviceId: this.device.deviceId,
         temperature: 28.4,
         ph: 6.95,
         waterLevel: 78.5,
         light: 65.0,
+        pumpStatus: false,
+        systemMode: 'AUTO',
+        systemStatus: 'NORMAL',
         deviceStatus: 'Online', // 'Online' | 'Offline'
         wifiStatus: 'Connected',
         rssi: -58,
@@ -147,6 +151,9 @@
         if (!merged.supabaseKey) merged.supabaseKey = DEFAULT_DEVICE.supabaseKey;
         if (merged.supabaseUrl) merged.supabaseUrl = merged.supabaseUrl.trim().replace(/\/+$/, '');
         if (merged.supabaseKey) merged.supabaseKey = merged.supabaseKey.trim();
+        if (!merged.supabaseTable || merged.supabaseTable === 'wolffia_telemetry') {
+          merged.supabaseTable = 'sensor_readings';
+        }
         return merged;
       } catch (e) {
         console.warn('Failed to parse saved device settings, using defaults.', e);
@@ -417,20 +424,29 @@
         this.liveSubscription = null;
       }
 
-      const tableName = this.device.supabaseTable || 'wolffia_telemetry';
-
       try {
         this.liveSubscription = this.supabaseClient
           .channel('wolffia_realtime_stream')
           .on('postgres_changes', {
             event: 'INSERT',
             schema: 'public',
-            table: tableName
+            table: 'sensor_readings'
           }, (payload) => {
-            console.log('[Supabase Realtime] New telemetry received:', payload);
+            console.log('[Supabase Realtime sensor_readings] New row:', payload);
             if (payload && payload.new) {
               this.handleIncomingTelemetryRow(payload.new);
-              this.logActivity(`[Supabase Live] ได้รับข้อมูลใหม่จาก ${payload.new.device_id || 'ESP32'} สำเร็จ`, 'cloud');
+              this.logActivity(`[Supabase Live] บอร์ด ${payload.new.device_id || 'ESP32'} ส่งข้อมูลใหม่ (sensor_readings)`, 'cloud');
+            }
+          })
+          .on('postgres_changes', {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'wolffia_telemetry'
+          }, (payload) => {
+            console.log('[Supabase Realtime wolffia_telemetry] New row:', payload);
+            if (payload && payload.new) {
+              this.handleIncomingTelemetryRow(payload.new);
+              this.logActivity(`[Supabase Live] บอร์ด ${payload.new.device_id || 'ESP32'} ส่งข้อมูลใหม่ (wolffia_telemetry)`, 'cloud');
             }
           })
           .subscribe((status) => {
@@ -448,18 +464,74 @@
     }
 
     handleIncomingTelemetryRow(row) {
+      if (!row) return;
       const prev = Object.assign({}, this.current);
-      const newTemp = parseFloat(row.temperature !== undefined ? row.temperature : (row.temp !== undefined ? row.temp : this.current.temperature));
-      const newPh = parseFloat(row.ph !== undefined ? row.ph : this.current.ph);
-      const newWater = parseFloat(row.water_level !== undefined ? row.water_level : (row.waterLevel !== undefined ? row.waterLevel : this.current.waterLevel));
-      const newLight = parseFloat(row.light !== undefined ? row.light : this.current.light);
-      const newRssi = row.rssi !== undefined ? parseInt(row.rssi) : this.current.rssi;
-      const newPing = row.ping !== undefined ? parseInt(row.ping) : this.current.ping;
-      const newStatus = row.device_status || 'Online';
+
+      // 1. Temperature: handle DS18B20 disconnect sentinel (-999 or out-of-range)
+      let rawTemp = row.temperature !== undefined ? parseFloat(row.temperature) : (row.temp !== undefined ? parseFloat(row.temp) : NaN);
+      let newTemp = prev.temperature;
+      let tempValid = true;
+      if (!isNaN(rawTemp) && isFinite(rawTemp)) {
+        if (rawTemp === -999.0 || rawTemp < -40 || rawTemp > 125) {
+          tempValid = false;
+        } else {
+          newTemp = parseFloat(rawTemp.toFixed(1));
+        }
+      }
+
+      // 2. pH: handle sensor error sentinel (-1.0 or out-of-range)
+      let rawPh = row.ph !== undefined ? parseFloat(row.ph) : NaN;
+      let newPh = prev.ph;
+      let phValid = true;
+      if (!isNaN(rawPh) && isFinite(rawPh)) {
+        if (rawPh < 0 || rawPh > 14) {
+          phValid = false;
+        } else {
+          newPh = parseFloat(rawPh.toFixed(2));
+        }
+      }
+
+      // 3. Water Level: handle ultrasonic error sentinel (-1.0 or out-of-range)
+      let rawWater = row.water_level !== undefined ? parseFloat(row.water_level) : (row.water !== undefined ? parseFloat(row.water) : (row.waterLevel !== undefined ? parseFloat(row.waterLevel) : NaN));
+      let newWater = prev.waterLevel;
+      let waterValid = true;
+      if (!isNaN(rawWater) && isFinite(rawWater)) {
+        if (rawWater < 0 || rawWater > 100) {
+          waterValid = false;
+        } else {
+          newWater = parseFloat(rawWater.toFixed(1));
+        }
+      }
+
+      // 4. Light: handle BH1750 error sentinel (-1.0)
+      let rawLight = row.light !== undefined ? parseFloat(row.light) : (row.lux !== undefined ? parseFloat(row.lux) : NaN);
+      let newLight = prev.light;
+      let lightValid = true;
+      if (!isNaN(rawLight) && isFinite(rawLight)) {
+        if (rawLight < 0) {
+          lightValid = false;
+        } else {
+          newLight = parseFloat(rawLight.toFixed(1));
+        }
+      }
+
+      // 5. Pump status, Mode, and Safety Status from ESP32 Firmware V6
+      let newPump = row.pump_status !== undefined ? Boolean(row.pump_status) : (row.pump !== undefined ? Boolean(row.pump) : Boolean(prev.pumpStatus));
+      let newMode = row.system_mode || row.mode || prev.systemMode || 'AUTO';
+      let rawSystemStatus = row.system_status || row.status || row.device_status || prev.systemStatus || 'NORMAL';
+      let newDeviceStatus = (rawSystemStatus === 'NORMAL' || rawSystemStatus === 'Online') ? 'Online' : rawSystemStatus;
+
+      // 6. Network info
+      const newRssi = row.rssi !== undefined ? parseInt(row.rssi) : prev.rssi;
+      const newPing = row.ping !== undefined ? parseInt(row.ping) : prev.ping;
       const ts = row.created_at || new Date().toISOString();
 
-      const prevTemp = prev.temperature || newTemp;
-      const tempDiff = parseFloat((newTemp - prevTemp).toFixed(1));
+      if (row.ip && row.ip !== '-' && row.ip.includes('.')) {
+        this.device.ipAddress = row.ip;
+      }
+
+      // Update Trends
+      const tempDiff = parseFloat((newTemp - prev.temperature).toFixed(1));
       const phDiff = parseFloat((newPh - prev.ph).toFixed(2));
       const waterDiff = parseFloat((newWater - prev.waterLevel).toFixed(1));
       const lightDiff = parseFloat((newLight - prev.light).toFixed(1));
@@ -468,13 +540,14 @@
         temp: { diff: tempDiff, direction: tempDiff >= 0 ? 'up' : 'down', text: (tempDiff >= 0 ? '+' : '') + tempDiff + '°C' },
         ph: { diff: phDiff, direction: phDiff >= 0 ? 'up' : 'down', text: (phDiff >= 0 ? '+' : '') + phDiff },
         waterLevel: { diff: waterDiff, direction: waterDiff >= 0 ? 'up' : 'down', text: (waterDiff >= 0 ? '+' : '') + waterDiff + '%' },
-        light: { diff: lightDiff, direction: lightDiff >= 0 ? 'up' : 'down', text: (lightDiff >= 0 ? '+' : '') + lightDiff + '%' }
+        light: { diff: lightDiff, direction: lightDiff >= 0 ? 'up' : 'down', text: (lightDiff >= 0 ? '+' : '') + lightDiff + (newLight > 100 ? ' lx' : '%') }
       };
 
       const devId = row.device_id || this.device.deviceId;
       this.device.deviceId = devId;
       if (row.rssi !== undefined) this.device.rssi = newRssi;
       this.supabaseStatus = 'Connected';
+      this.isLiveFresh = true;
 
       this.current = {
         deviceId: devId,
@@ -483,11 +556,18 @@
         ph: newPh,
         waterLevel: newWater,
         light: newLight,
-        deviceStatus: newStatus,
+        pumpStatus: newPump,
+        systemMode: newMode,
+        systemStatus: rawSystemStatus,
+        deviceStatus: newDeviceStatus,
         wifiStatus: 'Connected',
         rssi: newRssi,
         ping: newPing,
-        timestamp: ts
+        timestamp: ts,
+        tempValid,
+        phValid,
+        waterValid,
+        lightValid
       };
 
       this.history.push(Object.assign({}, this.current));
@@ -552,9 +632,9 @@
       this.evaluateAlerts();
     }
 
-    tickLiveSync() {
-      // If Web Serial USB data arrived recently (within 5 seconds), let USB stream drive the data
-      if (this.lastSerialDataTime && (Date.now() - this.lastSerialDataTime < 5000)) {
+    async tickLiveSync() {
+      // If Web Serial USB data arrived recently (within 6 seconds), let USB stream drive the data
+      if (this.lastSerialDataTime && (Date.now() - this.lastSerialDataTime < 6000)) {
         return;
       }
 
@@ -562,53 +642,66 @@
         this.initSupabase();
       }
 
-      if (this.supabaseClient) {
-        const tableName = this.device.supabaseTable || 'wolffia_telemetry';
-        this.supabaseClient
-          .from(tableName)
-          .select('*')
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .then(({ data, error }) => {
-            if (error) {
-              const isTableMissing = error.code === 'PGRST205' || (error.message && error.message.includes('Could not find the table'));
-              if (isTableMissing) {
-                this.supabaseStatus = 'Needs Table';
-              } else {
-                this.supabaseStatus = 'Error: ' + error.message;
-              }
-              // Keep alive so sensor gauges don't look dead/frozen
-              this.applyLiveHeartbeatDrift();
-              this.notifyListeners();
-            } else if (data && data.length > 0) {
-              const latest = data[0];
-              this.supabaseStatus = 'Connected';
-              if (latest.id !== this.lastProcessedRowId && latest.created_at !== this.lastProcessedRowTime) {
-                this.lastProcessedRowId = latest.id;
-                this.lastProcessedRowTime = latest.created_at;
-                this.handleIncomingTelemetryRow(latest);
-              } else {
-                const rowTime = new Date(latest.created_at).getTime();
-                this.isLiveFresh = (Date.now() - rowTime) < 15000;
-                // Live heartbeat continuous pulse around real baseline
-                this.applyLiveHeartbeatDrift();
-                this.notifyListeners();
-              }
-            } else {
-              this.supabaseStatus = 'Connected (0 records)';
-              this.isLiveFresh = false;
-              this.applyLiveHeartbeatDrift();
-              this.notifyListeners();
+      if (!this.supabaseClient) {
+        this.supabaseStatus = 'Not Configured';
+        this.applyLiveHeartbeatDrift();
+        this.notifyListeners();
+        return;
+      }
+
+      try {
+        let latest = null;
+
+        // 1. Try sensor_readings first (Target table of ESP32 firmware V6)
+        try {
+          const { data, error } = await this.supabaseClient
+            .from('sensor_readings')
+            .select('*')
+            .order('created_at', { ascending: false })
+            .limit(1);
+
+          if (!error && data && data.length > 0) {
+            latest = data[0];
+          }
+        } catch (e) {}
+
+        // 2. Fallback to wolffia_telemetry if sensor_readings has no records yet
+        if (!latest) {
+          try {
+            const { data, error } = await this.supabaseClient
+              .from('wolffia_telemetry')
+              .select('*')
+              .order('created_at', { ascending: false })
+              .limit(1);
+
+            if (!error && data && data.length > 0) {
+              latest = data[0];
             }
-          })
-          .catch(err => {
-            console.warn('[Supabase Live] fetch exception:', err);
-            this.supabaseStatus = 'Network Error';
+          } catch (e) {}
+        }
+
+        if (latest) {
+          this.supabaseStatus = 'Connected';
+          if (latest.id !== this.lastProcessedRowId && latest.created_at !== this.lastProcessedRowTime) {
+            this.lastProcessedRowId = latest.id;
+            this.lastProcessedRowTime = latest.created_at;
+            this.handleIncomingTelemetryRow(latest);
+          } else {
+            const rowTime = new Date(latest.created_at).getTime();
+            // ESP32 V6 sends to Supabase every 60s, so consider live fresh if within 90s
+            this.isLiveFresh = (Date.now() - rowTime) < 90000;
             this.applyLiveHeartbeatDrift();
             this.notifyListeners();
-          });
-      } else {
-        this.supabaseStatus = 'Not Configured';
+          }
+        } else {
+          this.supabaseStatus = 'Connected (0 records)';
+          this.isLiveFresh = false;
+          this.applyLiveHeartbeatDrift();
+          this.notifyListeners();
+        }
+      } catch (err) {
+        console.warn('[Supabase Live] fetch exception:', err);
+        this.supabaseStatus = 'Network Error';
         this.applyLiveHeartbeatDrift();
         this.notifyListeners();
       }
@@ -631,12 +724,24 @@
 
       try {
         const testClient = sbLib.createClient(url, key, { auth: { persistSession: false } });
-        const tableName = this.device.supabaseTable || 'wolffia_telemetry';
-        const { data, error } = await testClient
-          .from(tableName)
+        const primaryTable = this.device.supabaseTable || 'sensor_readings';
+        
+        let targetTable = primaryTable;
+        let { data, error } = await testClient
+          .from(primaryTable)
           .select('*')
           .order('created_at', { ascending: false })
           .limit(1);
+
+        if (error && primaryTable === 'sensor_readings') {
+          // Check if fallback table wolffia_telemetry works
+          const fb = await testClient.from('wolffia_telemetry').select('*').limit(1);
+          if (!fb.error) {
+            targetTable = 'wolffia_telemetry';
+            data = fb.data;
+            error = null;
+          }
+        }
 
         if (error) {
           const isTableMissing = error.code === 'PGRST205' || 
@@ -655,7 +760,7 @@
             return {
               success: true,
               needsTable: true,
-              message: `✅ เชื่อมต่อ Supabase สำเร็จ! (URL & Key ถูกต้อง แต่ยังไม่พบตาราง '${tableName}' กรุณากดปุ่ม 'คัดลอก SQL' และ 'เปิด SQL Editor' เพื่อรันคำสั่ง)`
+              message: `✅ เชื่อมต่อ Supabase สำเร็จ! (URL & Key ถูกต้อง แต่ยังไม่พบตาราง '${primaryTable}' กรุณากดปุ่ม 'คัดลอก SQL' และ 'เปิด SQL Editor' เพื่อรันคำสั่งสร้างตาราง)`
             };
           }
           return { success: false, message: `เชื่อมต่อไม่สำเร็จ: ${error.message} (Code: ${error.code || 'ERR'})` };
@@ -671,10 +776,9 @@
         localStorage.setItem('wolffia_supabase_key', key);
         this.saveDeviceSettings({ supabaseUrl: url, supabaseKey: key });
 
-        const recordCount = data ? data.length : 0;
         return {
           success: true,
-          message: `✅ เชื่อมต่อ Supabase สำเร็จ! (พบตาราง '${tableName}', สถานะ: พร้อมรับส่งข้อมูล IoT Telemetry)`,
+          message: `✅ เชื่อมต่อ Supabase สำเร็จ! (พบตาราง '${targetTable}', สถานะ: พร้อมรับส่งข้อมูล IoT Telemetry)`,
           data: data
         };
       } catch (err) {
@@ -690,32 +794,54 @@
         return { success: false, message: 'ยังไม่ได้เชื่อมต่อ Supabase กรุณากำหนดค่าและทดสอบการเชื่อมต่อก่อน' };
       }
 
-      const tableName = this.device.supabaseTable || 'wolffia_telemetry';
-      const payload = {
+      const primaryTable = this.device.supabaseTable || 'sensor_readings';
+      
+      // Build payload matching sensor_readings columns (ESP32 V6 format)
+      const sensorPayload = {
         device_id: customData.deviceId || this.device.deviceId,
         temperature: customData.temperature !== undefined ? customData.temperature : this.current.temperature,
         ph: customData.ph !== undefined ? customData.ph : this.current.ph,
-        water_level: customData.waterLevel !== undefined ? customData.waterLevel : this.current.waterLevel,
         light: customData.light !== undefined ? customData.light : this.current.light,
-        rssi: customData.rssi !== undefined ? customData.rssi : this.current.rssi,
-        device_status: customData.deviceStatus || 'Online',
-        created_at: new Date().toISOString()
+        water_level: customData.waterLevel !== undefined ? customData.waterLevel : this.current.waterLevel,
+        pump_status: customData.pump_status !== undefined ? customData.pump_status : Boolean(this.current.pumpStatus),
+        system_mode: customData.system_mode || this.current.systemMode || 'AUTO',
+        system_status: customData.system_status || this.current.systemStatus || 'NORMAL'
       };
 
       try {
-        const { data, error } = await this.supabaseClient.from(tableName).insert([payload]).select();
+        let { data, error } = await this.supabaseClient.from(primaryTable).insert([sensorPayload]).select();
+        
+        // If sensor_readings fails due to RLS or missing table, attempt fallback table wolffia_telemetry
+        if (error && primaryTable === 'sensor_readings') {
+          const wolffiaPayload = {
+            device_id: customData.deviceId || this.device.deviceId,
+            temperature: customData.temperature !== undefined ? customData.temperature : this.current.temperature,
+            ph: customData.ph !== undefined ? customData.ph : this.current.ph,
+            water_level: customData.waterLevel !== undefined ? customData.waterLevel : this.current.waterLevel,
+            light: customData.light !== undefined ? customData.light : this.current.light,
+            rssi: customData.rssi !== undefined ? customData.rssi : this.current.rssi,
+            device_status: customData.deviceStatus || 'Online'
+          };
+          const fallbackRes = await this.supabaseClient.from('wolffia_telemetry').insert([wolffiaPayload]).select();
+          if (!fallbackRes.error) {
+            data = fallbackRes.data;
+            error = null;
+          }
+        }
+
         if (error) {
           const isTableMissing = error.code === 'PGRST205' || 
             (error.message && (error.message.includes('Could not find the table') || error.message.includes('schema cache')));
           if (isTableMissing) {
             return {
               success: false,
-              message: `ยังไม่มีตาราง '${tableName}' ใน Supabase กรุณาคัดลอก SQL ไปรันใน Supabase SQL Editor ก่อน`
+              message: `ยังไม่มีตารางใน Supabase กรุณาคัดลอก SQL ไปรันใน Supabase SQL Editor ก่อน`
             };
           }
           return { success: false, message: `ส่งข้อมูลไม่สำเร็จ: ${error.message}` };
         }
-        this.logActivity(`[Supabase Insert] ส่งข้อมูลเทเลเมทรีขึ้นคลาวด์สำเร็จ (${payload.temperature}°C, pH ${payload.ph})`, 'cloud');
+
+        this.logActivity(`[Supabase Insert] ส่งข้อมูลเทเลเมทรีขึ้นคลาวด์สำเร็จ (${sensorPayload.temperature}°C, pH ${sensorPayload.ph})`, 'cloud');
         if (data && data.length > 0) {
           this.handleIncomingTelemetryRow(data[0]);
         }
@@ -731,15 +857,36 @@
       }
       if (!this.supabaseClient) return [];
 
-      const tableName = this.device.supabaseTable || 'wolffia_telemetry';
       try {
-        const { data, error } = await this.supabaseClient
-          .from(tableName)
-          .select('*')
-          .order('created_at', { ascending: false })
-          .limit(limit);
+        let data = null;
 
-        if (!error && data && data.length > 0) {
+        // 1. Try sensor_readings first
+        try {
+          const res = await this.supabaseClient
+            .from('sensor_readings')
+            .select('*')
+            .order('created_at', { ascending: false })
+            .limit(limit);
+          if (!res.error && res.data && res.data.length > 0) {
+            data = res.data;
+          }
+        } catch (e) {}
+
+        // 2. Fallback to wolffia_telemetry
+        if (!data || data.length === 0) {
+          try {
+            const res = await this.supabaseClient
+              .from('wolffia_telemetry')
+              .select('*')
+              .order('created_at', { ascending: false })
+              .limit(limit);
+            if (!res.error && res.data && res.data.length > 0) {
+              data = res.data;
+            }
+          } catch (e) {}
+        }
+
+        if (data && data.length > 0) {
           const reversed = data.slice().reverse();
           const realRows = reversed.map(r => ({
             timestamp: r.created_at,
@@ -749,6 +896,9 @@
             ph: parseFloat(r.ph || 7.0),
             waterLevel: parseFloat(r.water_level !== undefined ? r.water_level : (r.waterLevel !== undefined ? r.waterLevel : 78)),
             light: parseFloat(r.light || 65),
+            pumpStatus: r.pump_status !== undefined ? Boolean(r.pump_status) : false,
+            systemMode: r.system_mode || 'AUTO',
+            systemStatus: r.system_status || 'NORMAL',
             deviceStatus: r.device_status || 'Online',
             rssi: r.rssi || -58
           }));
