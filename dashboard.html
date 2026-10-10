@@ -188,9 +188,11 @@
               <p style="margin:0; font-size:0.78rem; color:#15803d" id="live-board-subtitle">ช่องทาง: Supabase Cloud (WiFi) + Web Serial (USB)</p>
             </div>
           </div>
-          <div style="display:flex; gap:0.5rem; align-items:center">
             <button type="button" class="btn btn-outline btn-sm" id="btn-banner-usb" onclick="toggleUsbSerialConnection()" style="font-size:0.78rem; padding:0.3rem 0.75rem">
               <i class="fa-solid fa-microchip"></i> เสียบสาย USB อ่านค่าสด
+            </button>
+            <button type="button" class="btn btn-outline btn-sm" id="btn-sample-telemetry" onclick="sendSampleTelemetryToSupabase()" style="font-size:0.78rem; padding:0.3rem 0.75rem" title="ส่งค่าสุ่มชุดใหม่เข้า Supabase ทันทีเพื่อทดสอบว่าค่าบนจอเปลี่ยน">
+              <i class="fa-solid fa-flask"></i> ทดสอบส่งค่าใหม่
             </button>
             <span id="live-board-last-time" style="font-size:0.75rem; color:#166534; font-weight:600"></span>
           </div>
@@ -1516,9 +1518,9 @@
   <div class="toast-container" id="toast-container"></div>
 
   <!-- Scripts with cache busting query strings -->
-  <script src="db-config.js?v=20261010-04"></script>
-  <script src="data-engine.js?v=20261010-04"></script>
-  <script src="app.js?v=20261010-04"></script>
+  <script src="db-config.js?v=20261010-05"></script>
+  <script src="data-engine.js?v=20261010-05"></script>
+  <script src="app.js?v=20261010-05"></script>
 
   <!-- Inline Failsafe: Guarantees input values are always preserved and filled -->
   <script>

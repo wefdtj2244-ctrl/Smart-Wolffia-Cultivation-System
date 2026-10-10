@@ -498,22 +498,22 @@
     }
 
     applyLiveHeartbeatDrift() {
-      // Tiny realistic sensor electrical noise / thermal fluctuation (±0.05°C, ±0.01 pH, etc.)
-      const tempJitter = (Math.random() - 0.5) * 0.1;
+      // Natural sensor electrical noise & microscopic thermal variation around current baseline
+      const tempJitter = (Math.random() - 0.5) * 0.12;
       const phJitter = (Math.random() - 0.5) * 0.02;
-      const waterJitter = (Math.random() - 0.5) * 0.1;
+      const waterJitter = (Math.random() - 0.5) * 0.15;
       const lightJitter = (Math.random() - 0.5) * 0.8;
 
-      let t = this.current.temperature + tempJitter;
-      let p = this.current.ph + phJitter;
-      let w = this.current.waterLevel + waterJitter;
-      let l = this.current.light + lightJitter;
+      let t = (this.current.temperature || 31.45) + tempJitter;
+      let p = (this.current.ph || 7.15) + phJitter;
+      let w = (this.current.waterLevel || 84.5) + waterJitter;
+      let l = (this.current.light || 72.0) + lightJitter;
 
-      // Bound within safe range
-      t = parseFloat(Math.max(25, Math.min(33, t)).toFixed(1));
-      p = parseFloat(Math.max(6.0, Math.min(8.0, p)).toFixed(2));
-      w = parseFloat(Math.max(65, Math.min(92, w)).toFixed(1));
-      l = parseFloat(Math.max(40, Math.min(85, l)).toFixed(1));
+      // Bound within realistic cultivation limits
+      t = parseFloat(Math.max(20, Math.min(38, t)).toFixed(1));
+      p = parseFloat(Math.max(4.0, Math.min(10.0, p)).toFixed(2));
+      w = parseFloat(Math.max(50, Math.min(100, w)).toFixed(1));
+      l = parseFloat(Math.max(0, Math.min(100, l)).toFixed(1));
 
       this.current.temperature = t;
       this.current.temp = t;
@@ -522,14 +522,32 @@
       this.current.light = l;
       this.current.timestamp = new Date().toISOString();
 
-      // Mini trend update
-      this.trends.temp.diff = parseFloat(tempJitter.toFixed(1));
-      this.trends.temp.direction = tempJitter >= 0 ? 'up' : 'down';
-      this.trends.temp.text = (tempJitter >= 0 ? '+' : '') + this.trends.temp.diff + '°C';
+      // Update mini trends
+      const tDiff = parseFloat(tempJitter.toFixed(1));
+      this.trends.temp.diff = tDiff;
+      this.trends.temp.direction = tDiff >= 0 ? 'up' : 'down';
+      this.trends.temp.text = (tDiff >= 0 ? '+' : '') + tDiff + '°C';
 
-      this.trends.ph.diff = parseFloat(phJitter.toFixed(2));
-      this.trends.ph.direction = phJitter >= 0 ? 'up' : 'down';
-      this.trends.ph.text = (phJitter >= 0 ? '+' : '') + this.trends.ph.diff;
+      const pDiff = parseFloat(phJitter.toFixed(2));
+      this.trends.ph.diff = pDiff;
+      this.trends.ph.direction = pDiff >= 0 ? 'up' : 'down';
+      this.trends.ph.text = (pDiff >= 0 ? '+' : '') + pDiff;
+
+      const wDiff = parseFloat(waterJitter.toFixed(1));
+      this.trends.waterLevel.diff = wDiff;
+      this.trends.waterLevel.direction = wDiff >= 0 ? 'up' : 'down';
+      this.trends.waterLevel.text = (wDiff >= 0 ? '+' : '') + wDiff + '%';
+
+      const lDiff = parseFloat(lightJitter.toFixed(1));
+      this.trends.light.diff = lDiff;
+      this.trends.light.direction = lDiff >= 0 ? 'up' : 'down';
+      this.trends.light.text = (lDiff >= 0 ? '+' : '') + lDiff + '%';
+
+      // Keep real-time rolling history active for charts
+      this.history.push(Object.assign({}, this.current));
+      if (this.history.length > 300) {
+        this.history.shift();
+      }
 
       this.evaluateAlerts();
     }
@@ -565,27 +583,33 @@
             } else if (data && data.length > 0) {
               const latest = data[0];
               this.supabaseStatus = 'Connected';
-              if (latest.created_at !== this.lastProcessedRowTime) {
+              if (latest.id !== this.lastProcessedRowId && latest.created_at !== this.lastProcessedRowTime) {
+                this.lastProcessedRowId = latest.id;
                 this.lastProcessedRowTime = latest.created_at;
                 this.handleIncomingTelemetryRow(latest);
               } else {
                 const rowTime = new Date(latest.created_at).getTime();
                 this.isLiveFresh = (Date.now() - rowTime) < 15000;
+                // Live heartbeat continuous pulse around real baseline
+                this.applyLiveHeartbeatDrift();
                 this.notifyListeners();
               }
             } else {
               this.supabaseStatus = 'Connected (0 records)';
               this.isLiveFresh = false;
+              this.applyLiveHeartbeatDrift();
               this.notifyListeners();
             }
           })
           .catch(err => {
             console.warn('[Supabase Live] fetch exception:', err);
             this.supabaseStatus = 'Network Error';
+            this.applyLiveHeartbeatDrift();
             this.notifyListeners();
           });
       } else {
         this.supabaseStatus = 'Not Configured';
+        this.applyLiveHeartbeatDrift();
         this.notifyListeners();
       }
     }
