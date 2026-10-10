@@ -249,12 +249,35 @@
       telemetryBadge.style.color = '#15803d';
     }
 
+    // Live Missing Table Alert Banner
+    const tableAlert = document.getElementById('live-table-alert');
+    if (tableAlert) {
+      tableAlert.style.display = (engine.mode === 'LIVE' && engine.supabaseStatus === 'Needs Table') ? 'block' : 'none';
+    }
+
     // Cloud Sync Status
     const cloudStatus = document.getElementById('dash-cloud-status');
     if (cloudStatus) {
       if (engine.mode === 'LIVE') {
-        const isConn = engine.supabaseStatus === 'Connected';
-        cloudStatus.innerHTML = `<span class="status-badge ${isConn ? 'normal' : 'warning'}" style="border:none"><i class="fa-solid fa-cloud"></i> ${isConn ? 'Supabase Realtime เชื่อมต่อแล้ว' : (engine.supabaseStatus || 'กำลังเชื่อมต่อ...')}</span>`;
+        let isConn = engine.supabaseStatus === 'Connected';
+        let badgeText = 'Supabase Realtime เชื่อมต่อแล้ว';
+        let badgeClass = 'normal';
+
+        if (window.isUsbConnected) {
+          badgeText = 'USB Serial: รับข้อมูลจากบอร์ด ESP32 แบบสด';
+          badgeClass = 'normal';
+        } else if (engine.supabaseStatus === 'Needs Table') {
+          badgeText = 'Supabase: รอสร้างตาราง SQL';
+          badgeClass = 'warning';
+        } else if (engine.supabaseStatus === 'Connected (0 records)') {
+          badgeText = 'Supabase: เชื่อมต่อแล้ว (กำลังรอข้อมูลจากบอร์ด...)';
+          badgeClass = 'normal';
+        } else if (!isConn) {
+          badgeText = engine.supabaseStatus || 'กำลังเชื่อมต่อ...';
+          badgeClass = 'warning';
+        }
+
+        cloudStatus.innerHTML = `<span class="status-badge ${badgeClass}" style="border:none"><i class="fa-solid fa-tower-broadcast"></i> ${badgeText}</span>`;
       } else {
         cloudStatus.innerHTML = `<span class="status-badge normal" style="background:#f1f5f9; color:#475569; border:none"><i class="fa-solid fa-flask"></i> จำลองผ่าน Central Engine (Demo)</span>`;
       }
@@ -1342,6 +1365,143 @@ CREATE POLICY "Allow public insert" ON public.wolffia_telemetry FOR INSERT WITH 
       toast.style.transition = 'opacity 0.3s ease';
       setTimeout(() => toast.remove(), 300);
     }, 3500);
+  // ========================================================================
+  // WEB SERIAL API (USB DIRECT CONNECTION TO ESP32)
+  // ========================================================================
+  let usbSerialPort = null;
+  let usbSerialReader = null;
+  window.isUsbConnected = false;
+
+  window.toggleUsbSerialConnection = async function () {
+    if (window.isUsbConnected) {
+      try {
+        if (usbSerialReader) await usbSerialReader.cancel();
+        if (usbSerialPort) await usbSerialPort.close();
+      } catch (e) {}
+      window.isUsbConnected = false;
+      usbSerialPort = null;
+      usbSerialReader = null;
+      updateUsbButtonUI(false);
+      showToast('ยกเลิกการเชื่อมต่อ USB Serial เรียบร้อยแล้ว', 'info');
+      return;
+    }
+
+    if (!('serial' in navigator)) {
+      showToast('เบราว์เซอร์นี้ไม่รองรับ Web Serial API (แนะนำให้ใช้ Google Chrome หรือ Microsoft Edge บนคอมพิวเตอร์)', 'warning');
+      return;
+    }
+
+    try {
+      usbSerialPort = await navigator.serial.requestPort();
+      await usbSerialPort.open({ baudRate: 115200 });
+      window.isUsbConnected = true;
+      updateUsbButtonUI(true);
+      showToast('เชื่อมต่อบอร์ด ESP32 ผ่านสาย USB สำเร็จ! กำลังรับข้อมูลแบบ Real-time...', 'success');
+
+      // Auto switch to LIVE mode
+      if (window.WolffiaDataEngine && window.WolffiaDataEngine.mode !== 'LIVE') {
+        window.switchSystemMode('LIVE');
+      }
+
+      readUsbSerialStream();
+    } catch (err) {
+      if (err.name !== 'NotFoundError') {
+        showToast('การเชื่อมต่อ USB ขัดข้อง: ' + err.message, 'error');
+      }
+    }
+  };
+
+  function updateUsbButtonUI(connected) {
+    const btn = document.getElementById('btn-connect-usb');
+    const icon = document.getElementById('usb-status-icon');
+    const text = document.getElementById('usb-status-text');
+    if (!btn) return;
+    if (connected) {
+      btn.style.background = '#dcfce7';
+      btn.style.borderColor = '#86efac';
+      btn.style.color = '#15803d';
+      if (icon) icon.className = 'fa-solid fa-link';
+      if (text) text.textContent = 'USB: เชื่อมต่อแล้ว';
+    } else {
+      btn.style.background = '';
+      btn.style.borderColor = '';
+      btn.style.color = '';
+      if (icon) icon.className = 'fa-solid fa-microchip';
+      if (text) text.textContent = 'ต่อบอร์ด USB';
+    }
+  }
+
+  async function readUsbSerialStream() {
+    let buffer = '';
+    while (usbSerialPort && usbSerialPort.readable && window.isUsbConnected) {
+      try {
+        const textDecoder = new TextDecoderStream();
+        const readableStreamClosed = usbSerialPort.readable.pipeTo(textDecoder.writable);
+        const reader = textDecoder.readable.getReader();
+        usbSerialReader = reader;
+
+        while (true) {
+          const { value, done } = await reader.read();
+          if (done) break;
+          if (value) {
+            buffer += value;
+            const lines = buffer.split('\n');
+            buffer = lines.pop();
+            for (const line of lines) {
+              const trimmed = line.trim();
+              if (trimmed) parseSerialTelemetryLine(trimmed);
+            }
+          }
+        }
+      } catch (err) {
+        console.warn('USB Serial stream error:', err);
+        break;
+      }
+    }
+    window.isUsbConnected = false;
+    updateUsbButtonUI(false);
+  }
+
+  function parseSerialTelemetryLine(line) {
+    if (!line) return;
+    const engine = window.WolffiaDataEngine;
+    if (!engine) return;
+
+    try {
+      // 1. JSON Format: {"temp":28.5,"ph":6.9,"water":80,"light":65}
+      if (line.startsWith('{') && line.endsWith('}')) {
+        const parsed = JSON.parse(line);
+        engine.lastSerialDataTime = Date.now();
+        engine.handleIncomingTelemetryRow(parsed);
+        engine.insertTelemetryRow(parsed);
+        return;
+      }
+      // 2. Key:Value Format: TEMP:28.5,PH:6.9,WATER:80,LIGHT:65
+      if (line.includes(':')) {
+        const parsed = {};
+        const parts = line.split(/[,;\t]/);
+        parts.forEach(p => {
+          const [k, v] = p.split(':').map(s => s.trim());
+          if (k && v) {
+            const num = parseFloat(v);
+            if (!isNaN(num)) {
+              const lk = k.toLowerCase();
+              if (lk.includes('temp')) parsed.temperature = num;
+              else if (lk.includes('ph')) parsed.ph = num;
+              else if (lk.includes('water') || lk.includes('level')) parsed.water_level = num;
+              else if (lk.includes('light') || lk.includes('lux')) parsed.light = num;
+            }
+          }
+        });
+        if (Object.keys(parsed).length > 0) {
+          engine.lastSerialDataTime = Date.now();
+          engine.handleIncomingTelemetryRow(parsed);
+          engine.insertTelemetryRow(parsed);
+        }
+      }
+    } catch (e) {
+      console.log('Serial skip:', line);
+    }
   }
 
   // Helpers
