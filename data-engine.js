@@ -42,8 +42,8 @@
     ping: 24,
     uptimeStart: Date.now() - (14 * 24 * 3600 * 1000 + 6 * 3600 * 1000 + 32 * 60 * 1000), // ~14d 6h 32m
     interval: 2500, // ms
-    supabaseUrl: '',
-    supabaseKey: '',
+    supabaseUrl: 'https://dtersefrvlbyocwozdab.supabase.co',
+    supabaseKey: 'sb_publishable_zzcJS9T6nHg89bSF716qnw_ZeG6rQik',
     supabaseTable: 'wolffia_telemetry'
   };
 
@@ -140,7 +140,10 @@
         if (saved) parsed = JSON.parse(saved);
         if (url && !parsed.supabaseUrl) parsed.supabaseUrl = url;
         if (key && !parsed.supabaseKey) parsed.supabaseKey = key;
-        return Object.assign({}, DEFAULT_DEVICE, parsed);
+        const merged = Object.assign({}, DEFAULT_DEVICE, parsed);
+        if (!merged.supabaseUrl) merged.supabaseUrl = DEFAULT_DEVICE.supabaseUrl;
+        if (!merged.supabaseKey) merged.supabaseKey = DEFAULT_DEVICE.supabaseKey;
+        return merged;
       } catch (e) {
         console.warn('Failed to parse saved device settings, using defaults.', e);
       }

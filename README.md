@@ -91,13 +91,13 @@ ESP32 สามารถส่งค่าขึ้น Supabase ได้โด�
 
 **Endpoint:**
 ```
-POST https://<YOUR_PROJECT_ID>.supabase.co/rest/v1/wolffia_telemetry
+POST https://dtersefrvlbyocwozdab.supabase.co/rest/v1/wolffia_telemetry
 ```
 
 **Headers:**
 ```
-apikey: <YOUR_ANON_PUBLIC_KEY>
-Authorization: Bearer <YOUR_ANON_PUBLIC_KEY>
+apikey: sb_publishable_zzcJS9T6nHg89bSF716qnw_ZeG6rQik
+Authorization: Bearer sb_publishable_zzcJS9T6nHg89bSF716qnw_ZeG6rQik
 Content-Type: application/json
 Prefer: return=minimal
 ```

@@ -797,8 +797,8 @@
 
     setVal('cfg-device-id', dev.deviceId);
     setVal('cfg-interval', dev.interval || 2500);
-    setVal('cfg-supabase-url', dev.supabaseUrl || localStorage.getItem('wolffia_supabase_url') || '');
-    setVal('cfg-supabase-key', dev.supabaseKey || localStorage.getItem('wolffia_supabase_key') || '');
+    setVal('cfg-supabase-url', dev.supabaseUrl || localStorage.getItem('wolffia_supabase_url') || 'https://dtersefrvlbyocwozdab.supabase.co');
+    setVal('cfg-supabase-key', dev.supabaseKey || localStorage.getItem('wolffia_supabase_key') || 'sb_publishable_zzcJS9T6nHg89bSF716qnw_ZeG6rQik');
     setVal('cfg-supabase-table', dev.supabaseTable || 'wolffia_telemetry');
 
     // Update Supabase status badge
