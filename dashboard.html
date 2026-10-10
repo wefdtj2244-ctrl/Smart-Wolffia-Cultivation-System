@@ -1375,13 +1375,13 @@
 
               <div style="margin-bottom:1rem">
                 <label style="font-size:0.85rem; font-weight:600; display:block; margin-bottom:0.35rem">Supabase Project URL</label>
-                <input type="url" id="cfg-supabase-url" class="form-input" style="width:100%" value="https://dtersefrvlbyocwozdab.supabase.co" placeholder="https://dtersefrvlbyocwozdab.supabase.co">
+                <input type="text" id="cfg-supabase-url" class="form-input" style="width:100%" value="https://dtersefrvlbyocwozdab.supabase.co" placeholder="https://dtersefrvlbyocwozdab.supabase.co" autocomplete="off" spellcheck="false">
               </div>
 
               <div style="margin-bottom:1rem">
                 <label style="font-size:0.85rem; font-weight:600; display:block; margin-bottom:0.35rem">Supabase Anon Key</label>
                 <div style="position:relative">
-                  <input type="password" id="cfg-supabase-key" class="form-input" style="width:100%; padding-right:2.5rem" value="sb_publishable_zzcJS9T6nHg89bSF716qnw_ZeG6rQik" placeholder="sb_publishable_zzcJS9T6nHg89bSF716qnw_ZeG6rQik">
+                  <input type="password" id="cfg-supabase-key" class="form-input" style="width:100%; padding-right:2.5rem" value="sb_publishable_zzcJS9T6nHg89bSF716qnw_ZeG6rQik" placeholder="sb_publishable_zzcJS9T6nHg89bSF716qnw_ZeG6rQik" autocomplete="off" spellcheck="false">
                   <button type="button" onclick="toggleKeyVisibility()" style="position:absolute; right:0.5rem; top:50%; transform:translateY(-50%); background:none; border:none; cursor:pointer; color:var(--text-muted); padding:0.25rem 0.5rem;" title="แสดง/ซ่อนคีย์">
                     <i class="fa-solid fa-eye" id="icon-toggle-key"></i>
                   </button>
@@ -1438,9 +1438,41 @@
   <!-- Toast Notification Container -->
   <div class="toast-container" id="toast-container"></div>
 
-  <!-- Scripts -->
-  <script src="db-config.js"></script>
-  <script src="data-engine.js"></script>
-  <script src="app.js"></script>
+  <!-- Scripts with cache busting query strings -->
+  <script src="db-config.js?v=20261010-02"></script>
+  <script src="data-engine.js?v=20261010-02"></script>
+  <script src="app.js?v=20261010-02"></script>
+
+  <!-- Inline Failsafe: Guarantees input values are always preserved and filled -->
+  <script>
+    (function () {
+      function forceSetCredentials() {
+        var u = document.getElementById('cfg-supabase-url');
+        var k = document.getElementById('cfg-supabase-key');
+        var t = document.getElementById('cfg-supabase-table');
+        var defU = 'https://dtersefrvlbyocwozdab.supabase.co';
+        var defK = 'sb_publishable_zzcJS9T6nHg89bSF716qnw_ZeG6rQik';
+        var savedU = localStorage.getItem('wolffia_supabase_url');
+        var savedK = localStorage.getItem('wolffia_supabase_key');
+        if (u && (!u.value || u.value.trim() === '')) {
+          u.value = savedU || defU;
+        }
+        if (k && (!k.value || k.value.trim() === '')) {
+          k.value = savedK || defK;
+        }
+        if (t && (!t.value || t.value.trim() === '')) {
+          t.value = 'wolffia_telemetry';
+        }
+      }
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', forceSetCredentials);
+      } else {
+        forceSetCredentials();
+      }
+      setTimeout(forceSetCredentials, 50);
+      setTimeout(forceSetCredentials, 250);
+      setTimeout(forceSetCredentials, 800);
+    })();
+  </script>
 </body>
 </html>

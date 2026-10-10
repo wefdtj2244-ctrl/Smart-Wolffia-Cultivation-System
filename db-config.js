@@ -3,10 +3,33 @@
  * Supabase Database Configuration & ESP32 Telemetry Schema
  */
 
-// Supabase Configuration
-// Can also be configured directly via the Settings view in dashboard.html
 const DEFAULT_SUPABASE_URL = 'https://dtersefrvlbyocwozdab.supabase.co';
 const DEFAULT_SUPABASE_KEY = 'sb_publishable_zzcJS9T6nHg89bSF716qnw_ZeG6rQik';
+
+// Auto-guarantee valid credentials in localStorage
+(function autoEnsureSupabaseCredentials() {
+  try {
+    const curUrl = localStorage.getItem('wolffia_supabase_url');
+    const curKey = localStorage.getItem('wolffia_supabase_key');
+    if (!curUrl || curUrl.trim() === '' || curUrl.includes('your-project')) {
+      localStorage.setItem('wolffia_supabase_url', DEFAULT_SUPABASE_URL);
+    }
+    if (!curKey || curKey.trim() === '' || curKey.includes('eyJhbGciOi')) {
+      localStorage.setItem('wolffia_supabase_key', DEFAULT_KEY);
+    }
+    const devStr = localStorage.getItem('wolffia_device_v3');
+    if (devStr) {
+      const dev = JSON.parse(devStr);
+      if (!dev.supabaseUrl || dev.supabaseUrl.trim() === '' || dev.supabaseUrl.includes('your-project')) {
+        dev.supabaseUrl = DEFAULT_SUPABASE_URL;
+      }
+      if (!dev.supabaseKey || dev.supabaseKey.trim() === '' || dev.supabaseKey.includes('eyJhbGciOi')) {
+        dev.supabaseKey = DEFAULT_SUPABASE_KEY;
+      }
+      localStorage.setItem('wolffia_device_v3', JSON.stringify(dev));
+    }
+  } catch (e) {}
+})();
 
 const storedUrl = (localStorage.getItem('wolffia_supabase_url') || '').trim().replace(/\/+$/, '');
 const storedKey = (localStorage.getItem('wolffia_supabase_key') || '').trim();

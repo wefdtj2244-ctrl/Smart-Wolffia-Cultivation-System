@@ -834,12 +834,21 @@
 
     const defaultUrl = 'https://dtersefrvlbyocwozdab.supabase.co';
     const defaultKey = 'sb_publishable_zzcJS9T6nHg89bSF716qnw_ZeG6rQik';
-    const effectiveUrl = (dev.supabaseUrl || localStorage.getItem('wolffia_supabase_url') || defaultUrl).trim().replace(/\/+$/, '');
-    const effectiveKey = (dev.supabaseKey || localStorage.getItem('wolffia_supabase_key') || defaultKey).trim();
+    const effectiveUrl = (localStorage.getItem('wolffia_supabase_url') || dev.supabaseUrl || defaultUrl).trim().replace(/\/+$/, '');
+    const effectiveKey = (localStorage.getItem('wolffia_supabase_key') || dev.supabaseKey || defaultKey).trim();
 
-    setValSafe('cfg-supabase-url', effectiveUrl);
-    setValSafe('cfg-supabase-key', effectiveKey);
-    setValSafe('cfg-supabase-table', dev.supabaseTable || 'wolffia_telemetry');
+    const uEl = document.getElementById('cfg-supabase-url');
+    if (uEl && (!uEl.value || uEl.value.trim() === '' || force)) {
+      uEl.value = effectiveUrl;
+    }
+    const kEl = document.getElementById('cfg-supabase-key');
+    if (kEl && (!kEl.value || kEl.value.trim() === '' || force)) {
+      kEl.value = effectiveKey;
+    }
+    const tEl = document.getElementById('cfg-supabase-table');
+    if (tEl && (!tEl.value || tEl.value.trim() === '' || force)) {
+      tEl.value = dev.supabaseTable || 'wolffia_telemetry';
+    }
 
     updateSettingsLiveStatus(engine);
   }
@@ -1065,6 +1074,8 @@ CREATE POLICY "Allow public insert" ON public.wolffia_telemetry FOR INSERT WITH 
     if (!window.WolffiaDataEngine) return;
     localStorage.removeItem('wolffia_thresholds_v3');
     localStorage.removeItem('wolffia_device_v3');
+    localStorage.setItem('wolffia_supabase_url', 'https://dtersefrvlbyocwozdab.supabase.co');
+    localStorage.setItem('wolffia_supabase_key', 'sb_publishable_zzcJS9T6nHg89bSF716qnw_ZeG6rQik');
     window.location.reload();
   };
 
