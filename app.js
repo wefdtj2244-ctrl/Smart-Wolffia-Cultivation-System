@@ -17,15 +17,22 @@
   let filteredHistory = [];
   let alertFilterTab = 'all';
 
-  // Initialize once DOM is ready
-  document.addEventListener('DOMContentLoaded', () => {
-    initNavigation();
-    initSettingsForm();
-    initCharts();
+  // Initialize once DOM is ready (handles both pre- and post-DOMContentLoaded states)
+  function bootApp() {
+    try { initNavigation(); } catch (e) { console.error('initNavigation error:', e); }
+    try { initSettingsForm(); } catch (e) { console.error('initSettingsForm error:', e); }
+    try { initCharts(); } catch (e) { console.error('initCharts error:', e); }
+
+    // Expose switchView globally so any button/link can change views smoothly
+    window.switchView = switchView;
 
     // Subscribe to Central Data Engine updates
     if (window.WolffiaDataEngine) {
-      window.WolffiaDataEngine.subscribe(onDataEngineUpdate);
+      try {
+        window.WolffiaDataEngine.subscribe(onDataEngineUpdate);
+      } catch (e) {
+        console.error('DataEngine subscription error:', e);
+      }
     }
 
     // Set up popstate / hash routing
@@ -33,14 +40,24 @@
     if (window.location.hash) {
       const target = window.location.hash.replace('#', '');
       if (document.querySelector(`.dashboard-menu-item[data-view="${target}"]`)) {
-        switchView(target);
+        try { switchView(target); } catch (e) { console.error('switchView error:', e); }
       }
     }
 
     // Realtime digital clock update
-    setInterval(updateClock, 1000);
-    updateClock();
-  });
+    try {
+      updateClock();
+      setInterval(updateClock, 1000);
+    } catch (e) {
+      console.error('updateClock error:', e);
+    }
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', bootApp);
+  } else {
+    bootApp();
+  }
 
   // Digital Clock
   function updateClock() {
@@ -1538,6 +1555,8 @@ GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO anon, authenticated, se
       toast.style.transition = 'opacity 0.3s ease';
       setTimeout(() => toast.remove(), 300);
     }, 3500);
+  }
+
   // ========================================================================
   // WEB SERIAL API (USB DIRECT CONNECTION TO ESP32)
   // ========================================================================
