@@ -15,7 +15,7 @@ const DEFAULT_SUPABASE_KEY = 'sb_publishable_zzcJS9T6nHg89bSF716qnw_ZeG6rQik';
       localStorage.setItem('wolffia_supabase_url', DEFAULT_SUPABASE_URL);
     }
     if (!curKey || curKey.trim() === '' || curKey.includes('eyJhbGciOi')) {
-      localStorage.setItem('wolffia_supabase_key', DEFAULT_KEY);
+      localStorage.setItem('wolffia_supabase_key', DEFAULT_SUPABASE_KEY);
     }
     const devStr = localStorage.getItem('wolffia_device_v3');
     if (devStr) {

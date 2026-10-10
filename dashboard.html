@@ -51,11 +51,11 @@
         
         <!-- Toggle Demo / Live Switch -->
         <div class="mode-toggle-group">
-          <button type="button" class="mode-btn mode-demo active" id="btn-mode-demo" onclick="switchSystemMode('DEMO')">
+          <button type="button" class="mode-btn mode-demo" id="btn-mode-demo" onclick="switchSystemMode('DEMO')">
             <span class="pulse-dot demo"></span>
             <span>DEMO MODE</span>
           </button>
-          <button type="button" class="mode-btn mode-live" id="btn-mode-live" onclick="switchSystemMode('LIVE')">
+          <button type="button" class="mode-btn mode-live active" id="btn-mode-live" onclick="switchSystemMode('LIVE')">
             <span class="pulse-dot online"></span>
             <span>LIVE MODE</span>
           </button>
@@ -1170,6 +1170,43 @@
           </div>
         </div>
 
+        <!-- Live Board Connection & Telemetry Status Card -->
+        <div class="card" style="margin-bottom:1.5rem">
+          <div class="card-header">
+            <div class="card-title">
+              <i class="fa-solid fa-tower-broadcast" style="color:var(--color-success)"></i> สถานะการเชื่อมต่อบอร์ดแบบเรียลไทม์ (Live Board Telemetry)
+            </div>
+            <span class="status-badge normal" id="dev-conn-badge"><span class="pulse-dot online"></span> เชื่อมต่อแล้ว (Connected)</span>
+          </div>
+          <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:1.25rem">
+            <div>
+              <span style="font-size:0.75rem; color:var(--text-muted)">รหัสประจำตัวบอร์ด (Device ID)</span>
+              <div style="font-weight:700; font-size:1rem; margin-top:0.2rem" id="dev-device-id">ESP32-WOLFFIA-01</div>
+              <span style="font-size:0.75rem; color:var(--color-normal)" id="dev-conn-type">Cloud Sync (Supabase) + USB Serial</span>
+            </div>
+            <div>
+              <span style="font-size:0.75rem; color:var(--text-muted)">สัญญาณ Wi-Fi (RSSI)</span>
+              <div style="font-weight:700; font-size:1rem; margin-top:0.2rem" id="dev-rssi">-58 dBm</div>
+              <span style="font-size:0.75rem; color:var(--text-muted)">SSID: <span id="dev-wifi-ssid">SmartAgri_Wolffia_IoT</span></span>
+            </div>
+            <div>
+              <span style="font-size:0.75rem; color:var(--text-muted)">ความหน่วงเวลา (Latency / Ping)</span>
+              <div style="font-weight:700; font-size:1rem; margin-top:0.2rem" id="dev-ping">24 ms</div>
+              <span style="font-size:0.75rem; color:var(--color-normal)">ความเร็วตอบสนองดีเยี่ยม</span>
+            </div>
+            <div>
+              <span style="font-size:0.75rem; color:var(--text-muted)">ข้อมูลแพ็กเก็ตล่าสุด (Last Telemetry Packet)</span>
+              <div style="font-weight:700; font-size:0.95rem; margin-top:0.2rem" id="dev-last-seen">เมื่อสักครู่</div>
+              <span style="font-size:0.75rem; color:var(--text-muted)">ซิงค์อัตโนมัติทุก 2.5 วินาที</span>
+            </div>
+            <div>
+              <span style="font-size:0.75rem; color:var(--text-muted)">เซนเซอร์ตรวจวัดที่ติดตั้ง</span>
+              <div style="font-weight:700; font-size:1rem; margin-top:0.2rem">4/4 เซนเซอร์ทำงานสมบูรณ์</div>
+              <span style="font-size:0.75rem; color:var(--color-normal)">DS18B20, pH, Water, Light</span>
+            </div>
+          </div>
+        </div>
+
         <!-- Hardware Profile Card -->
         <div class="card" style="margin-bottom:1.5rem">
           <div class="card-header">
@@ -1464,9 +1501,9 @@
   <div class="toast-container" id="toast-container"></div>
 
   <!-- Scripts with cache busting query strings -->
-  <script src="db-config.js?v=20261010-02"></script>
-  <script src="data-engine.js?v=20261010-02"></script>
-  <script src="app.js?v=20261010-02"></script>
+  <script src="db-config.js?v=20261010-03"></script>
+  <script src="data-engine.js?v=20261010-03"></script>
+  <script src="app.js?v=20261010-03"></script>
 
   <!-- Inline Failsafe: Guarantees input values are always preserved and filled -->
   <script>

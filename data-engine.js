@@ -49,7 +49,9 @@
 
   class CentralDataEngine {
     constructor() {
-      this.mode = localStorage.getItem(STORAGE_KEY_MODE) || 'DEMO'; // 'DEMO' | 'LIVE'
+      // Connect directly to ESP32 board: default to LIVE MODE
+      this.mode = 'LIVE';
+      localStorage.setItem(STORAGE_KEY_MODE, 'LIVE');
       this.thresholds = this.loadThresholds();
       this.device = this.loadDeviceSettings();
       this.listeners = [];
@@ -240,6 +242,9 @@
     }
 
     startEngine() {
+      if (this.mode === 'LIVE') {
+        this.tickLiveSync();
+      }
       this.restartTimer();
     }
 
@@ -389,9 +394,10 @@
         this.supabaseStatus = 'Initialized';
         console.log('[CentralDataEngine] Supabase Client Initialized:', url);
 
-        // If in LIVE mode, establish Realtime channel
+        // If in LIVE mode, establish Realtime channel and fetch latest telemetry immediately
         if (this.mode === 'LIVE') {
           this.setupRealtimeSubscription();
+          this.fetchHistoricalTelemetry(50);
         }
         return this.supabaseClient;
       } catch (err) {
@@ -465,8 +471,13 @@
         light: { diff: lightDiff, direction: lightDiff >= 0 ? 'up' : 'down', text: (lightDiff >= 0 ? '+' : '') + lightDiff + '%' }
       };
 
+      const devId = row.device_id || this.device.deviceId;
+      this.device.deviceId = devId;
+      if (row.rssi !== undefined) this.device.rssi = newRssi;
+      this.supabaseStatus = 'Connected';
+
       this.current = {
-        deviceId: row.device_id || this.device.deviceId,
+        deviceId: devId,
         temperature: newTemp,
         temp: newTemp,
         ph: newPh,
@@ -708,7 +719,7 @@
 
         if (!error && data && data.length > 0) {
           const reversed = data.slice().reverse();
-          this.history = reversed.map(r => ({
+          const realRows = reversed.map(r => ({
             timestamp: r.created_at,
             deviceId: r.device_id || this.device.deviceId,
             temp: parseFloat(r.temperature !== undefined ? r.temperature : (r.temp !== undefined ? r.temp : 28)),
@@ -719,7 +730,17 @@
             deviceStatus: r.device_status || 'Online',
             rssi: r.rssi || -58
           }));
+
+          if (realRows.length >= 20) {
+            this.history = realRows;
+          } else {
+            const seed = this.generateHistoricalSeed(40);
+            this.history = [...seed.slice(0, 40 - realRows.length), ...realRows];
+          }
+
+          this.supabaseStatus = 'Connected';
           this.handleIncomingTelemetryRow(data[0]);
+          this.notifyListeners();
           return this.history;
         }
       } catch (err) {

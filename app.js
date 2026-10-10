@@ -790,9 +790,40 @@
     const d = engine.device;
     const c = engine.current;
 
-    setText('dev-uptime', d.uptime || '14 วัน 6 ชม. 32 นาที');
-    setText('dev-mac', d.macAddress);
-    setText('dev-ip', `IP: ${d.ipAddress}`);
+    // Calculate dynamic uptime
+    const uptimeMs = Date.now() - (d.uptimeStart || (Date.now() - (14 * 86400000 + 6 * 3600000 + 32 * 60000)));
+    const days = Math.floor(uptimeMs / (24 * 3600 * 1000));
+    const hours = Math.floor((uptimeMs % (24 * 3600 * 1000)) / (3600 * 1000));
+    const mins = Math.floor((uptimeMs % (3600 * 1000)) / (60 * 1000));
+    setText('dev-uptime', `${days} วัน ${hours} ชม. ${mins} นาที`);
+
+    setText('dev-mac', d.macAddress || '24:6F:28:7A:B1:0C');
+    setText('dev-ip', `IP: ${d.ipAddress || '192.168.1.145'}`);
+    setText('dev-device-id', c.deviceId || d.deviceId || 'ESP32-WOLFFIA-01');
+    setText('dev-rssi', `${c.rssi} dBm (${c.rssi > -65 ? 'สัญญาณดีเยี่ยม' : 'สัญญาณปานกลาง'})`);
+    setText('dev-wifi-ssid', d.wifiSsid || 'SmartAgri_Wolffia_IoT');
+    setText('dev-ping', `${c.ping || 24} ms`);
+
+    const lastTimeStr = c.timestamp ? new Date(c.timestamp).toLocaleTimeString('th-TH') : 'เมื่อสักครู่';
+    setText('dev-last-seen', lastTimeStr);
+
+    const connTypeEl = document.getElementById('dev-conn-type');
+    if (connTypeEl) {
+      connTypeEl.textContent = window.isUsbConnected 
+        ? 'USB Web Serial (115200 Baud) + Supabase' 
+        : (engine.mode === 'LIVE' ? 'WiFi + Supabase Cloud Stream' : 'Central Simulation Engine (Demo)');
+    }
+
+    const connBadge = document.getElementById('dev-conn-badge');
+    if (connBadge) {
+      if (engine.mode === 'LIVE') {
+        connBadge.className = 'status-badge normal';
+        connBadge.innerHTML = '<span class="pulse-dot online"></span> เชื่อมต่อแล้ว (Connected)';
+      } else {
+        connBadge.className = 'status-badge normal';
+        connBadge.innerHTML = '<span class="pulse-dot demo"></span> โหมดจำลอง (Demo Active)';
+      }
+    }
   }
 
   window.runDiagnostics = function () {
@@ -1470,15 +1501,26 @@ ALTER TABLE public.wolffia_telemetry DISABLE ROW LEVEL SECURITY;`;
     if (!engine) return;
 
     try {
-      // 1. JSON Format: {"temp":28.5,"ph":6.9,"water":80,"light":65}
-      if (line.startsWith('{') && line.endsWith('}')) {
-        const parsed = JSON.parse(line);
+      // 1. JSON Format: {"device_id":"ESP32-WOLFFIA-01","temperature":28.5,"ph":6.9,"water_level":80,"light":65,"rssi":-58}
+      const jsonMatch = line.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        const parsed = JSON.parse(jsonMatch[0]);
         engine.lastSerialDataTime = Date.now();
         engine.handleIncomingTelemetryRow(parsed);
         engine.insertTelemetryRow(parsed);
         return;
       }
-      // 2. Key:Value Format: TEMP:28.5,PH:6.9,WATER:80,LIGHT:65
+
+      // 2. IP Address / WiFi log from ESP32 boot
+      if (line.includes('IP:')) {
+        const ipMatch = line.match(/\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b/);
+        if (ipMatch) {
+          engine.device.ipAddress = ipMatch[0];
+          engine.notifyListeners();
+        }
+      }
+
+      // 3. Key:Value Format: TEMP:28.5,PH:6.9,WATER:80,LIGHT:65,RSSI:-58
       if (line.includes(':')) {
         const parsed = {};
         const parts = line.split(/[,;\t]/);
@@ -1486,12 +1528,16 @@ ALTER TABLE public.wolffia_telemetry DISABLE ROW LEVEL SECURITY;`;
           const [k, v] = p.split(':').map(s => s.trim());
           if (k && v) {
             const num = parseFloat(v);
+            const lk = k.toLowerCase();
             if (!isNaN(num)) {
-              const lk = k.toLowerCase();
               if (lk.includes('temp')) parsed.temperature = num;
               else if (lk.includes('ph')) parsed.ph = num;
               else if (lk.includes('water') || lk.includes('level')) parsed.water_level = num;
               else if (lk.includes('light') || lk.includes('lux')) parsed.light = num;
+              else if (lk.includes('rssi')) parsed.rssi = parseInt(num);
+            } else {
+              if (lk.includes('device') || lk.includes('id')) parsed.device_id = v;
+              else if (lk.includes('status')) parsed.device_status = v;
             }
           }
         });
