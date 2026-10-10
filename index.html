@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ระบบเพาะเลี้ยงไข่ผำอัจฉริยะ - Smart Wolffia Cultivation V3.0.1</title>
+  <meta name="description" content="ระบบเพาะเลี้ยงไข่ผำอัจฉริยะเพื่อการผลิตโปรตีนทางเลือกแห่งอนาคต โครงงานวิจัยปริญญานิพนธ์ IoT Smart Agriculture">
+  
+  <!-- Google Fonts: Prompt & Sarabun -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  
+  <!-- FontAwesome 6 Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <!-- Stylesheets -->
+  <link rel="stylesheet" href="styles.css">
+
+  <style>
+    .hero-banner {
+      background: linear-gradient(135deg, #064e3b 0%, #065f46 50%, #047857 100%);
+      color: white;
+      padding: 4.5rem 1.5rem;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+    .hero-banner::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      left: -50%;
+      width: 200%;
+      height: 200%;
+      background: radial-gradient(circle, rgba(255,255,255,0.06) 10%, transparent 60%);
+      pointer-events: none;
+    }
+    .hero-content {
+      max-width: 860px;
+      margin: 0 auto;
+      position: relative;
+      z-index: 2;
+    }
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.4rem 1rem;
+      border-radius: var(--radius-full);
+      background: rgba(255, 255, 255, 0.15);
+      backdrop-filter: blur(4px);
+      font-size: 0.85rem;
+      font-weight: 600;
+      margin-bottom: 1.5rem;
+      border: 1px solid rgba(255,255,255,0.25);
+    }
+    .hero-title {
+      font-size: 2.75rem;
+      font-weight: 700;
+      color: white;
+      line-height: 1.25;
+      margin-bottom: 1rem;
+      letter-spacing: -0.02em;
+    }
+    .hero-subtitle {
+      font-size: 1.15rem;
+      color: #d1fae5;
+      line-height: 1.6;
+      margin-bottom: 2rem;
+      font-weight: 400;
+    }
+    .hero-cta-group {
+      display: flex;
+      justify-content: center;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+    .btn-hero-primary {
+      background-color: #10b981;
+      color: white;
+      padding: 0.85rem 1.75rem;
+      font-size: 1.05rem;
+      font-weight: 600;
+      border-radius: var(--radius-full);
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.6rem;
+      box-shadow: 0 4px 14px rgba(16, 185, 129, 0.4);
+      transition: var(--transition-fast);
+    }
+    .btn-hero-primary:hover {
+      background-color: #059669;
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(16, 185, 129, 0.5);
+    }
+    .btn-hero-secondary {
+      background: rgba(255, 255, 255, 0.12);
+      color: white;
+      padding: 0.85rem 1.75rem;
+      font-size: 1.05rem;
+      font-weight: 600;
+      border-radius: var(--radius-full);
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.6rem;
+      border: 1px solid rgba(255,255,255,0.3);
+      backdrop-filter: blur(4px);
+      transition: var(--transition-fast);
+    }
+    .btn-hero-secondary:hover {
+      background: rgba(255, 255, 255, 0.2);
+    }
+    .features-section {
+      max-width: 1200px;
+      margin: 3.5rem auto;
+      padding: 0 1.5rem;
+    }
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1.5rem;
+      margin-top: 2rem;
+    }
+    .feature-card {
+      background: white;
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-lg);
+      padding: 2rem 1.75rem;
+      box-shadow: var(--shadow-card);
+      transition: var(--transition-fast);
+    }
+    .feature-card:hover {
+      transform: translateY(-4px);
+      box-shadow: var(--shadow-hover);
+    }
+    .feature-icon {
+      width: 52px;
+      height: 52px;
+      border-radius: var(--radius-md);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5rem;
+      margin-bottom: 1.25rem;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Navbar -->
+  <header class="navbar">
+    <div class="nav-container">
+      <a href="index.html" class="logo-group">
+        <div class="logo-icon-box">
+          <i class="fa-solid fa-seedling"></i>
+        </div>
+        <div class="logo-text-box">
+          <h1>
+            Smart Wolffia Cultivation
+            <span class="badge-version">V3.0.1</span>
+          </h1>
+          <p>ระบบเพาะเลี้ยงไข่ผำอัจฉริยะเพื่อการผลิตโปรตีนทางเลือก</p>
+        </div>
+      </a>
+      <div class="nav-right-controls">
+        <a href="dashboard.html" class="btn btn-primary">
+          <i class="fa-solid fa-gauge-high"></i> เปิด IoT Dashboard
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <!-- Hero Section -->
+  <section class="hero-banner">
+    <div class="hero-content">
+      <div class="hero-badge">
+        <span class="pulse-dot online"></span>
+        <span>โครงงานวิจัยปริญญานิพนธ์ระดับมหาวิทยาลัย • IoT Smart Agriculture</span>
+      </div>
+      <h1 class="hero-title">ระบบเพาะเลี้ยงไข่ผำอัจฉริยะ<br>เพื่อการผลิตโปรตีนทางเลือกแห่งอนาคต</h1>
+      <p class="hero-subtitle">
+        ยกระดับการเพาะเลี้ยง "ไข่ผำ" (Wolffia globosa) แหล่งโปรตีนทางเลือก (Plant-based Superfood) ที่เติบโตเร็วที่สุดในโลก 
+        ด้วยระบบอัตโนมัติไมโครคอนโทรลเลอร์ ESP32 ตรวจวัดอุณหภูมิ, pH, ระดับน้ำ, แสงสว่าง และควบคุมปั๊มน้ำหมุนเวียนแบบเรียลไทม์
+      </p>
+      <div class="hero-cta-group">
+        <a href="dashboard.html" class="btn-hero-primary">
+          <i class="fa-solid fa-circle-play"></i> เข้าสู่หน้า IoT Dashboard (V3.0.1)
+        </a>
+        <a href="dashboard.html#monitoring" class="btn-hero-secondary">
+          <i class="fa-solid fa-wave-square"></i> ติดตามข้อมูลสด (Live Monitor)
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Project Highlights -->
+  <section class="features-section">
+    <div style="text-align:center; max-width:700px; margin:0 auto">
+      <span class="badge-version" style="font-size:0.8rem">SYSTEM ARCHITECTURE</span>
+      <h2 style="font-size:2rem; margin-top:0.5rem">จุดเด่นและศักยภาพของระบบเพาะเลี้ยง</h2>
+      <p style="color:var(--text-secondary); margin-top:0.5rem">ขับเคลื่อนด้วยข้อมูล (Data-Driven) เติบโตด้วยเทคโนโลยี IoT ทลายข้อจำกัดการเลี้ยงในบ่อธรรมชาติ</p>
+    </div>
+
+    <div class="features-grid">
+      
+      <!-- Card 1 -->
+      <div class="feature-card">
+        <div class="feature-icon" style="background:#ecfdf5; color:#10b981">
+          <i class="fa-solid fa-shield-virus"></i>
+        </div>
+        <h3 style="font-size:1.2rem; margin-bottom:0.6rem">Purity (ผลผลิตบริสุทธิ์)</h3>
+        <p style="font-size:0.9rem; color:var(--text-secondary); line-height:1.6">
+          ระบบปิดสมบูรณ์แบบ ปราศจากฝุ่นละออง สารเคมีตกค้าง และศัตรูพืช เพื่อให้ได้ผลผลิตไข่ผำระดับพรีเมียม สะอาด ปลอดภัยตามมาตรฐานอาหาร
+        </p>
+      </div>
+
+      <!-- Card 2 -->
+      <div class="feature-card">
+        <div class="feature-icon" style="background:#dbeafe; color:#2563eb">
+          <i class="fa-solid fa-recycle"></i>
+        </div>
+        <h3 style="font-size:1.2rem; margin-bottom:0.6rem">Efficiency (จัดสรรทรัพยากร)</h3>
+        <p style="font-size:0.9rem; color:var(--text-secondary); line-height:1.6">
+          ระบบน้ำหมุนเวียน (Recirculating System) ใช้พื้นที่น้อยและประหยัดน้ำได้มากกว่าบ่อดินถึง 85% เหมาะสำหรับการศึกษาและชุมชนเมือง
+        </p>
+      </div>
+
+      <!-- Card 3 -->
+      <div class="feature-card">
+        <div class="feature-icon" style="background:#fef3c7; color:#d97706">
+          <i class="fa-solid fa-microchip"></i>
+        </div>
+        <h3 style="font-size:1.2rem; margin-bottom:0.6rem">Precision (ควบคุมแม่นยำ)</h3>
+        <p style="font-size:0.9rem; color:var(--text-secondary); line-height:1.6">
+          เซ็นเซอร์อ่านค่าอุณหภูมิ, pH, ระดับน้ำ และแสงสว่างแบบเรียลไทม์ พร้อมระบบสั่งงานปั๊มน้ำอัตโนมัติ ทำให้ไข่ผำเติบโตเร็วกว่าบ่อธรรมชาติ
+        </p>
+      </div>
+
+      <!-- Card 4 -->
+      <div class="feature-card">
+        <div class="feature-icon" style="background:#f3e8ff; color:#9333ea">
+          <i class="fa-solid fa-brain"></i>
+        </div>
+        <h3 style="font-size:1.2rem; margin-bottom:0.6rem">Analytics & Health Score</h3>
+        <p style="font-size:0.9rem; color:var(--text-secondary); line-height:1.6">
+          คำนวณคะแนน Environmental Health Score (0-100%) และให้ข้อเสนอแนะเชิงชีววิทยาอัตโนมัติ พร้อมตรวจจับสิ่งผิดปกติ (Anomaly Detection)
+        </p>
+      </div>
+
+    </div>
+
+    <!-- Quick Navigation Hub -->
+    <div class="card" style="margin-top:3rem; padding:2rem; text-align:center">
+      <h3 style="font-size:1.35rem; margin-bottom:0.5rem">พร้อมเริ่มต้นสำรวจแดชบอร์ดเพาะเลี้ยงไข่ผำอัจฉริยะ?</h3>
+      <p style="color:var(--text-secondary); font-size:0.92rem; margin-bottom:1.5rem">
+        เลือกเข้าถึงเมนูต่างๆ บนระบบ IoT Dashboard ได้ทันที:
+      </p>
+      <div style="display:flex; justify-content:center; gap:0.75rem; flex-wrap:wrap">
+        <a href="dashboard.html#dashboard" class="btn btn-outline"><i class="fa-solid fa-gauge-high"></i> ภาพรวม Dashboard</a>
+        <a href="dashboard.html#monitoring" class="btn btn-outline"><i class="fa-solid fa-wave-square"></i> มอนิเตอร์ Live</a>
+        <a href="dashboard.html#statistics" class="btn btn-outline"><i class="fa-solid fa-chart-line"></i> วิเคราะห์สถิติ</a>
+        <a href="dashboard.html#analytics" class="btn btn-outline"><i class="fa-solid fa-brain"></i> สภาพแวดล้อมอัจฉริยะ</a>
+        <a href="dashboard.html#sensors" class="btn btn-outline"><i class="fa-solid fa-microchip"></i> เซนเซอร์ตรวจวัด</a>
+        <a href="dashboard.html#reports" class="btn btn-outline"><i class="fa-solid fa-file-invoice"></i> สรุปและรายงาน</a>
+        <a href="dashboard.html#settings" class="btn btn-outline"><i class="fa-solid fa-gear"></i> การตั้งค่าเกณฑ์</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer style="background:var(--bg-surface); border-top:1px solid var(--border-color); padding:2rem 1.5rem; text-align:center; color:var(--text-muted); font-size:0.85rem">
+    <p>Smart Wolffia Cultivation System V3.0.1 • โครงงานวิจัยปริญญานิพนธ์ IoT เพื่อการผลิตโปรตีนทางเลือก</p>
+    <p style="margin-top:0.25rem">พัฒนาโดย Senior Full-Stack Developer & IoT Smart Agriculture Specialist</p>
+  </footer>
+
+</body>
+</html>

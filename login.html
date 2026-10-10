@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>เข้าสู่ระบบพนักงาน - WAVE Backoffice</title>
+  
+  <!-- Google Fonts: Prompt & Sarabun -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- FontAwesome 6 Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Prompt', 'Sarabun', 'sans-serif'],
+          },
+          colors: {
+            brand: {
+              50: '#eff6ff',
+              100: '#dbeafe',
+              500: '#3b82f6',
+              600: '#2563eb',
+              700: '#1d4ed8',
+            }
+          }
+        }
+      }
+    }
+  </script>
+</head>
+<body class="bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-100 min-h-screen font-sans text-slate-800 antialiased flex flex-col justify-between selection:bg-blue-500 selection:text-white">
+
+  <!-- Minimal Top Navigation -->
+  <header class="w-full px-6 py-4 flex items-center justify-between">
+    <a href="index.html" class="flex items-center gap-2.5 text-slate-700 hover:text-blue-600 transition-colors">
+      <div class="w-9 h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center text-lg shadow-sm">
+        🌊
+      </div>
+      <span class="font-bold text-lg tracking-tight">WAVE <span class="text-xs px-2 py-0.5 rounded-md bg-blue-100 text-blue-700 font-semibold ml-1">Staff</span></span>
+    </a>
+    <a href="dashboard.html" class="text-sm font-medium text-slate-600 hover:text-blue-600 flex items-center gap-1.5 px-3 py-1.5 rounded-lg hover:bg-white/80 transition-all">
+      <i class="fa-solid fa-gauge-high text-xs"></i>
+      <span>เข้าสู่แดชบอร์ด</span>
+    </a>
+  </header>
+
+  <!-- Login Card Centered Container -->
+  <main class="flex-grow flex items-center justify-center px-4 py-8">
+    <div class="w-full max-w-md bg-white border border-slate-100 rounded-2xl shadow-xl p-8 sm:p-10 transition-all">
+      
+      <!-- Header & Branding Section -->
+      <div class="text-center mb-8">
+        <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-tr from-blue-600 to-sky-400 text-white text-3xl shadow-lg shadow-blue-500/20 mb-4 transform hover:scale-105 transition-transform">
+          🌊
+        </div>
+        <h1 class="text-2xl font-bold text-slate-800 tracking-tight">สำหรับพนักงานร้าน</h1>
+        <p class="text-sm text-slate-500 mt-1.5">เข้าสู่ระบบเพื่อจัดการออเดอร์และเมนูอาหาร</p>
+      </div>
+
+      <!-- Error Alert Message -->
+      <div id="login-error" class="hidden mb-6 p-3.5 bg-red-50 border border-red-200 text-red-700 rounded-xl text-sm font-medium flex items-center gap-2.5 animate-pulse">
+        <i class="fa-solid fa-circle-exclamation text-red-500 text-base flex-shrink-0"></i>
+        <span id="login-error-text">ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง!</span>
+      </div>
+
+      <!-- Login Form -->
+      <form id="login-form" class="space-y-5" onsubmit="return false;">
+        
+        <!-- Username Field -->
+        <div>
+          <label for="username" class="block text-sm font-medium text-slate-700 mb-1.5">
+            ชื่อผู้ใช้ (Username)
+          </label>
+          <div class="relative">
+            <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+              <i class="fa-solid fa-user text-sm"></i>
+            </div>
+            <input 
+              type="text" 
+              id="username" 
+              name="username"
+              autocomplete="username"
+              class="w-full pl-10 pr-4 py-3 bg-slate-50/50 border border-slate-200 rounded-xl text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 focus:bg-white transition-all"
+              placeholder="ระบุ username พนักงาน" 
+              required
+            >
+          </div>
+        </div>
+
+        <!-- Password Field -->
+        <div>
+          <div class="flex items-center justify-between mb-1.5">
+            <label for="password" class="block text-sm font-medium text-slate-700">
+              รหัสผ่าน (Password)
+            </label>
+          </div>
+          <div class="relative">
+            <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+              <i class="fa-solid fa-lock text-sm"></i>
+            </div>
+            <input 
+              type="password" 
+              id="password" 
+              name="password"
+              autocomplete="current-password"
+              class="w-full pl-10 pr-11 py-3 bg-slate-50/50 border border-slate-200 rounded-xl text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 focus:bg-white transition-all"
+              placeholder="ระบุ password" 
+              required
+            >
+            <!-- Toggle Show/Hide Password -->
+            <button 
+              type="button" 
+              id="btn-toggle-password" 
+              class="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-slate-600 focus:outline-none transition-colors"
+              title="แสดง/ซ่อนรหัสผ่าน"
+            >
+              <i class="fa-solid fa-eye text-sm" id="eye-icon"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- Submit Button -->
+        <button 
+          type="submit" 
+          id="btn-login" 
+          class="w-full mt-2 py-3 px-4 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-medium text-sm rounded-xl shadow-lg shadow-blue-500/25 flex items-center justify-center gap-2 transition-all transform active:scale-[0.99] disabled:opacity-75 disabled:cursor-not-allowed"
+        >
+          <i class="fa-solid fa-right-to-bracket text-sm"></i>
+          <span id="btn-login-text">เข้าสู่ระบบ</span>
+        </button>
+
+      </form>
+
+      <!-- Test Credentials Box (Demo) -->
+      <div class="mt-8 pt-6 border-t border-slate-100">
+        <div class="bg-blue-50/60 border border-blue-100/80 rounded-xl p-4 text-xs">
+          <div class="flex items-center gap-1.5 font-semibold text-blue-900 mb-2.5">
+            <i class="fa-solid fa-lightbulb text-amber-500 text-sm"></i>
+            <span>ข้อมูลการทดสอบเข้าสู่ระบบ:</span>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-slate-600 mb-3">
+            <div class="bg-white/80 p-2.5 rounded-lg border border-blue-50">
+              <span class="block text-slate-400 font-medium text-[11px]">พนักงานทั่วไป</span>
+              <span class="font-bold text-slate-700">staff</span> / <span class="font-medium text-slate-500">password123</span>
+            </div>
+            <div class="bg-white/80 p-2.5 rounded-lg border border-blue-50">
+              <span class="block text-slate-400 font-medium text-[11px]">ผู้จัดการร้าน</span>
+              <span class="font-bold text-slate-700">admin</span> / <span class="font-medium text-slate-500">admin123</span>
+            </div>
+          </div>
+
+          <!-- Quick Fill Buttons -->
+          <div class="flex gap-2">
+            <button 
+              type="button" 
+              onclick="quickFill('staff', 'password123')"
+              class="flex-1 py-1.5 px-2 bg-blue-100/80 hover:bg-blue-200/80 text-blue-700 rounded-lg text-center font-medium transition-colors"
+            >
+              <i class="fa-solid fa-user-check text-[11px] mr-1"></i> กรอกพนักงาน
+            </button>
+            <button 
+              type="button" 
+              onclick="quickFill('admin', 'admin123')"
+              class="flex-1 py-1.5 px-2 bg-blue-100/80 hover:bg-blue-200/80 text-blue-700 rounded-lg text-center font-medium transition-colors"
+            >
+              <i class="fa-solid fa-user-shield text-[11px] mr-1"></i> กรอกผู้จัดการ
+            </button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <footer class="py-4 text-center text-xs text-slate-400">
+    &copy; 2026 WAVE Staff Portal & Smart IoT Management System. All rights reserved.
+  </footer>
+
+  <!-- Scripts -->
+  <script src="db-config.js"></script>
+  <script>
+    // Quick Fill Helper
+    function quickFill(user, pass) {
+      const uField = document.getElementById("username");
+      const pField = document.getElementById("password");
+      if (uField) uField.value = user;
+      if (pField) pField.value = pass;
+      uField.focus();
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+      const loginForm = document.getElementById("login-form");
+      const loginError = document.getElementById("login-error");
+      const loginErrorText = document.getElementById("login-error-text");
+      const btnLogin = document.getElementById("btn-login");
+      const btnLoginText = document.getElementById("btn-login-text");
+      const passwordInput = document.getElementById("password");
+      const btnTogglePassword = document.getElementById("btn-toggle-password");
+      const eyeIcon = document.getElementById("eye-icon");
+
+      // Password visibility toggle
+      if (btnTogglePassword && passwordInput && eyeIcon) {
+        btnTogglePassword.addEventListener("click", () => {
+          if (passwordInput.type === "password") {
+            passwordInput.type = "text";
+            eyeIcon.classList.remove("fa-eye");
+            eyeIcon.classList.add("fa-eye-slash");
+          } else {
+            passwordInput.type = "password";
+            eyeIcon.classList.remove("fa-eye-slash");
+            eyeIcon.classList.add("fa-eye");
+          }
+        });
+      }
+
+      // If already logged in, go straight to dashboard
+      if (sessionStorage.getItem("wave_logged_in_staff")) {
+        window.location.href = "dashboard.html";
+        return;
+      }
+
+      // Handle Form Submit
+      loginForm.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        
+        // Reset Error State
+        loginError.classList.add("hidden");
+        btnLogin.disabled = true;
+        btnLoginText.textContent = "กำลังตรวจสอบ...";
+        const origIcon = btnLogin.querySelector("i");
+        if (origIcon) origIcon.className = "fa-solid fa-circle-notch fa-spin text-sm";
+
+        const usernameVal = document.getElementById("username").value.trim();
+        const passwordVal = document.getElementById("password").value.trim();
+
+        // Simulate tiny delay for realistic authentic experience
+        await new Promise(r => setTimeout(r, 400));
+
+        try {
+          let staffUser = null;
+
+          // Direct check
+          if (usernameVal === "staff" && passwordVal === "password123") {
+            staffUser = { id: "s1", username: "staff", name: "สมชาย (พนักงานทั่วไป)", role: "Staff" };
+          } else if (usernameVal === "admin" && passwordVal === "admin123") {
+            staffUser = { id: "s2", username: "admin", name: "สมศรี (ผู้จัดการร้าน)", role: "Manager" };
+          } else if (window.WaveDB && typeof window.WaveDB.loginStaff === "function") {
+            staffUser = await window.WaveDB.loginStaff(usernameVal, passwordVal);
+          }
+
+          if (staffUser) {
+            // Success! Store session details
+            sessionStorage.setItem("wave_logged_in_staff", JSON.stringify(staffUser));
+            
+            // Redirect to dashboard
+            window.location.href = "dashboard.html";
+          } else {
+            // Invalid credentials
+            loginErrorText.textContent = "ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง กรุณาตรวจสอบอีกครั้ง";
+            loginError.classList.remove("hidden");
+            
+            btnLogin.disabled = false;
+            btnLoginText.textContent = "เข้าสู่ระบบ";
+            if (origIcon) origIcon.className = "fa-solid fa-right-to-bracket text-sm";
+          }
+        } catch (err) {
+          console.error("Login Error:", err);
+          loginErrorText.textContent = "เกิดข้อผิดพลาดในการตรวจสอบข้อมูล";
+          loginError.classList.remove("hidden");
+          
+          btnLogin.disabled = false;
+          btnLoginText.textContent = "เข้าสู่ระบบ";
+          if (origIcon) origIcon.className = "fa-solid fa-right-to-bracket text-sm";
+        }
+      });
+    });
+  </script>
+</body>
+</html>

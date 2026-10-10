@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- Google Analytics 4 (GA4) -->
+  <script src="analytics.js"></script>
+  <title>ติดตามสถานะคำสั่งซื้อ - Wave Restaurant</title>
+  <!-- Stylesheets -->
+  <link rel="stylesheet" href="styles.css">
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Supabase CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+
+  <!-- Navbar -->
+  <header class="navbar">
+    <div class="nav-container">
+      <a href="index.html" class="logo-group">
+        <div class="logo-icon">🌊</div>
+        <span class="logo-text">WAVE</span>
+      </a>
+      <div class="nav-links">
+        <a href="index.html" class="nav-btn"><i class="fa-solid fa-arrow-left"></i> สั่งอาหารเพิ่ม</a>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="main-layout">
+    
+    <div class="status-card" id="status-card-container">
+      <!-- Loading indicator -->
+      <div style="text-align: center; padding: 2rem;">
+        <i class="fa-solid fa-spinner fa-spin" style="font-size: 2.5rem; color: var(--primary);"></i>
+        <p style="margin-top: 1rem; color: var(--text-muted);">กำลังโหลดข้อมูลสถานะออเดอร์...</p>
+      </div>
+    </div>
+
+  </main>
+
+  <script src="db-config.js"></script>
+  <script>
+    // Logic for loading and live polling order status
+    document.addEventListener("DOMContentLoaded", () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      const orderId = urlParams.get("id");
+
+      if (!orderId) {
+        document.getElementById("status-card-container").innerHTML = `
+          <div class="status-icon-container cancelled">
+            <i class="fa-solid fa-circle-xmark"></i>
+          </div>
+          <h2>ไม่พบรหัสใบสั่งซื้อ</h2>
+          <p style="color: var(--text-muted); margin-top: 0.5rem; margin-bottom: 2rem;">ขออภัย ไม่พบเลขคำสั่งซื้อที่ท่านระบุในระบบ</p>
+          <a href="index.html" class="action-btn-block" style="display:inline-flex; width:auto; padding: 0.8rem 2rem;">กลับหน้าแรกสั่งอาหาร</a>
+        `;
+        return;
+      }
+
+      // Initial Fetch
+      fetchOrderStatus(orderId);
+
+      // Start Polling every 5 seconds for status updates
+      const pollInterval = setInterval(() => {
+        fetchOrderStatus(orderId, true);
+      }, 5000);
+
+      // Stop polling if order completes or cancels
+      window.currentPollInterval = pollInterval;
+    });
+
+    async function fetchOrderStatus(orderId, isSilent = false) {
+      try {
+        const order = await window.WaveDB.getOrderById(orderId);
+        
+        if (!order) {
+          clearInterval(window.currentPollInterval);
+          document.getElementById("status-card-container").innerHTML = `
+            <div class="status-icon-container cancelled">
+              <i class="fa-solid fa-triangle-exclamation"></i>
+            </div>
+            <h2>ไม่พบใบสั่งซื้อนี้ในระบบ</h2>
+            <p style="color: var(--text-muted); margin-top: 0.5rem; margin-bottom: 2rem;">รายการสั่งซื้อหมายเลข <strong>${orderId}</strong> อาจถูกลบหรือถูกยกเลิกแล้ว</p>
+            <a href="index.html" class="action-btn-block" style="display:inline-flex; width:auto; padding: 0.8rem 2rem;">กลับสู่เมนูหลัก</a>
+          `;
+          return;
+        }
+
+        // Draw Status Page Content
+        renderOrderDetails(order);
+
+        // Stop polling if completed or cancelled
+        if (order.status === 'completed' || order.status === 'cancelled') {
+          clearInterval(window.currentPollInterval);
+        }
+
+      } catch (err) {
+        console.error("Error fetching order:", err);
+      }
+    }
+
+    function renderOrderDetails(order) {
+      const container = document.getElementById("status-card-container");
+      
+      // Determine status details
+      let statusThai = "";
+      let statusIcon = "";
+      let statusClass = order.status; // pending, preparing, ready, completed, cancelled
+      
+      switch(order.status) {
+        case "pending":
+          statusThai = "ห้องเครื่องได้รับออเดอร์แล้ว";
+          statusIcon = '<i class="fa-regular fa-clock"></i>';
+          break;
+        case "preparing":
+          statusThai = "เชฟกำลังปรุงอาหารของคุณ";
+          statusIcon = '<i class="fa-solid fa-fire-burner"></i>';
+          break;
+        case "ready":
+          statusThai = "อาหารพร้อมเสิร์ฟแล้ว!";
+          statusIcon = '<i class="fa-solid fa-bell"></i>';
+          break;
+        case "completed":
+          statusThai = "เสิร์ฟเรียบร้อย ขอบคุณที่ใช้บริการ";
+          statusIcon = '<i class="fa-solid fa-circle-check"></i>';
+          break;
+        case "cancelled":
+          statusThai = "รายการสั่งซื้อนี้ถูกยกเลิก";
+          statusIcon = '<i class="fa-solid fa-circle-xmark"></i>';
+          break;
+      }
+
+      // Format date
+      const dateObj = new Date(order.created_at);
+      const timeStr = dateObj.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) + ' น.';
+
+      // Generate items list html
+      let itemsListHtml = "";
+      order.items.forEach(item => {
+        itemsListHtml += `
+          <div style="display:flex; justify-content:space-between; margin-bottom:0.4rem; font-size:0.95rem; border-bottom:1px dashed var(--border-color); padding-bottom:0.4rem;">
+            <span>${item.name} <strong style="color:var(--primary)">x ${item.qty}</strong></span>
+            <span style="font-weight:600">฿${item.price * item.qty}</span>
+          </div>
+        `;
+      });
+
+      // Calculate Timeline Steps Active classes
+      const stepIndex = getStepIndex(order.status);
+
+      container.innerHTML = `
+        <div class="status-icon-container ${statusClass}">
+          ${statusIcon}
+        </div>
+        
+        <h2 style="font-size:1.6rem">${statusThai}</h2>
+        <span class="status-badge ${statusClass}">ออเดอร์หมายเลข: ${order.id}</span>
+        
+        <p style="color:var(--text-muted); font-size:0.95rem; margin-top:-0.5rem; margin-bottom:1.5rem">
+          ผู้สั่งซื้อ: <strong>${order.customerName}</strong> | 📍 โต๊ะที่นั่ง: <strong>${order.tableNo}</strong> | เวลา: <strong>${timeStr}</strong>
+        </p>
+
+        <!-- Dynamic Visual Timeline -->
+        <div class="tracker-timeline">
+          <div class="timeline-step ${stepIndex >= 1 ? 'done' : ''} ${order.status === 'pending' ? 'active' : ''}">
+            <div class="timeline-dot"><i class="fa-solid fa-receipt"></i></div>
+            <div class="timeline-label">รับออเดอร์</div>
+          </div>
+          <div class="timeline-step ${stepIndex >= 2 ? 'done' : ''} ${order.status === 'preparing' ? 'active' : ''}">
+            <div class="timeline-dot"><i class="fa-solid fa-fire"></i></div>
+            <div class="timeline-label">กำลังทำ</div>
+          </div>
+          <div class="timeline-step ${stepIndex >= 3 ? 'done' : ''} ${order.status === 'ready' ? 'active' : ''}">
+            <div class="timeline-dot"><i class="fa-solid fa-bell"></i></div>
+            <div class="timeline-label">พร้อมเสิร์ฟ</div>
+          </div>
+          <div class="timeline-step ${stepIndex >= 4 ? 'done' : ''} ${order.status === 'completed' ? 'active' : ''}">
+            <div class="timeline-dot"><i class="fa-solid fa-mug-hot"></i></div>
+            <div class="timeline-label">เสิร์ฟแล้ว</div>
+          </div>
+        </div>
+
+        <!-- Order Summary Detail -->
+        <div style="background-color:var(--bg-primary); padding:1.2rem; border-radius:var(--radius-md); text-align:left; border:1px solid var(--border-color); margin-top:2rem">
+          <h3 style="font-size:1.1rem; margin-bottom:0.8rem; border-bottom:1px solid var(--border-color); padding-bottom:0.4rem">รายการอาหารที่สั่ง</h3>
+          
+          <div style="max-height:160px; overflow-y:auto; margin-bottom:0.8rem; padding-right:0.2rem">
+            ${itemsListHtml}
+          </div>
+
+          ${order.notes ? `
+            <div style="font-size:0.85rem; color:var(--text-muted); background-color:var(--bg-secondary); padding:0.6rem; border-radius:var(--radius-sm); border-left:3px solid var(--primary); margin-bottom:0.8rem">
+              <strong>หมายเหตุ:</strong> ${order.notes}
+            </div>
+          ` : ''}
+
+          <div style="display:flex; justify-content:space-between; font-weight:800; font-size:1.2rem; color:var(--secondary); padding-top:0.6rem; border-top:1px solid var(--border-color)">
+            <span>ยอดรวมสุทธิ (รวม VAT)</span>
+            <span style="color:var(--primary)">฿${order.total}</span>
+          </div>
+        </div>
+
+        <div style="margin-top:2rem; display:flex; gap:1rem; justify-content:center">
+          <a href="index.html" class="nav-btn-primary" style="display:inline-flex; align-items:center; gap:0.5rem"><i class="fa-solid fa-utensils"></i> กลับไปสั่งเพิ่ม</a>
+          <button onclick="window.print()" class="nav-btn" style="border:1px solid var(--border-color); background-color:var(--bg-secondary)"><i class="fa-solid fa-print"></i> พิมพ์หน้านี้</button>
+        </div>
+      `;
+    }
+
+    function getStepIndex(status) {
+      switch(status) {
+        case "pending": return 1;
+        case "preparing": return 2;
+        case "ready": return 3;
+        case "completed": return 4;
+        case "cancelled": return 0;
+        default: return 0;
+      }
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,1436 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Smart Wolffia Cultivation V3.0.1 - IoT Dashboard</title>
+  <meta name="description" content="ระบบเพาะเลี้ยงไข่ผำอัจฉริยะเพื่อการผลิตโปรตีนทางเลือกแห่งอนาคต ด้วยเทคโนโลยี IoT (ESP32) และการควบคุมสภาพแวดล้อมอัตโนมัติ">
+  
+  <!-- Google Fonts: Prompt & Sarabun -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  
+  <!-- FontAwesome 6 Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  
+  <!-- Supabase CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  
+  <!-- Stylesheets -->
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <!-- Top Navigation Bar -->
+  <header class="navbar">
+    <div class="nav-container">
+      
+      <!-- Brand & Project Title -->
+      <div class="logo-group">
+        <button class="mobile-menu-toggle" id="btn-toggle-sidebar" title="เปิด/ปิดเมนู">
+          <i class="fa-solid fa-bars"></i>
+        </button>
+        <div class="logo-icon-box">
+          <i class="fa-solid fa-seedling"></i>
+        </div>
+        <div class="logo-text-box">
+          <h1>
+            ระบบเพาะเลี้ยงไข่ผำอัจฉริยะ
+            <span class="badge-version">V3.0.1</span>
+          </h1>
+          <p>Smart Wolffia Cultivation System • นวัตกรรม IoT โปรตีนทางเลือก</p>
+        </div>
+      </div>
+
+      <!-- Controls: Demo/Live Toggle & Status -->
+      <div class="nav-right-controls">
+        
+        <!-- Toggle Demo / Live Switch -->
+        <div class="mode-toggle-group">
+          <button type="button" class="mode-btn mode-demo active" id="btn-mode-demo" onclick="switchSystemMode('DEMO')">
+            <span class="pulse-dot demo"></span>
+            <span>DEMO MODE</span>
+          </button>
+          <button type="button" class="mode-btn mode-live" id="btn-mode-live" onclick="switchSystemMode('LIVE')">
+            <span class="pulse-dot online"></span>
+            <span>LIVE MODE</span>
+          </button>
+        </div>
+
+        <!-- Real-time Clock & Last Updated -->
+        <div class="nav-time-badge" title="เวลาอัปเดตข้อมูลล่าสุด">
+          <i class="fa-regular fa-clock" style="color:var(--primary)"></i>
+          <span id="nav-live-time">กำลังโหลด...</span>
+        </div>
+
+        <!-- Reload / Resync Action -->
+        <button class="btn btn-outline btn-sm no-print" onclick="refreshDataEngine()" title="ซิงค์ข้อมูลใหม่">
+          <i class="fa-solid fa-rotate"></i>
+          <span class="desktop-only">รีเฟรช</span>
+        </button>
+
+      </div>
+    </div>
+  </header>
+
+  <!-- Dashboard Container Grid -->
+  <div class="dashboard-grid">
+    
+    <!-- Sidebar Navigation -->
+    <aside class="dashboard-sidebar" id="dashboard-sidebar">
+      <div>
+        <div class="sidebar-heading">เมนูหลัก (Navigation)</div>
+        <ul class="dashboard-menu">
+          <li class="dashboard-menu-item active" data-view="dashboard">
+            <i class="fa-solid fa-gauge-high"></i> แดชบอร์ดภาพรวม (Dashboard)
+          </li>
+          <li class="dashboard-menu-item" data-view="monitoring">
+            <i class="fa-solid fa-wave-square"></i> มอนิเตอร์เรียลไทม์ (Monitoring)
+          </li>
+          <li class="dashboard-menu-item" data-view="sensors">
+            <i class="fa-solid fa-microchip"></i> เซนเซอร์ทั้งหมด (Sensors)
+          </li>
+          <li class="dashboard-menu-item" data-view="history">
+            <i class="fa-solid fa-clock-rotate-left"></i> ประวัติข้อมูลย้อนหลัง (History)
+          </li>
+          <li class="dashboard-menu-item" data-view="statistics">
+            <i class="fa-solid fa-chart-line"></i> วิเคราะห์สถิติ (Statistics)
+          </li>
+          <li class="dashboard-menu-item" data-view="analytics">
+            <i class="fa-solid fa-brain"></i> วิเคราะห์อัจฉริยะ (Analytics)
+          </li>
+          <li class="dashboard-menu-item" data-view="alerts">
+            <i class="fa-solid fa-triangle-exclamation"></i> การแจ้งเตือน (Alerts)
+          </li>
+          <li class="dashboard-menu-item" data-view="reports">
+            <i class="fa-solid fa-file-invoice"></i> สรุปและรายงาน (Reports)
+          </li>
+          <li class="dashboard-menu-item" data-view="device">
+            <i class="fa-solid fa-server"></i> จัดการอุปกรณ์ (Device)
+          </li>
+          <li class="dashboard-menu-item" data-view="settings">
+            <i class="fa-solid fa-gear"></i> การตั้งค่า (Settings)
+          </li>
+        </ul>
+      </div>
+
+      <!-- Bottom Mini Device Info Widget -->
+      <div class="sidebar-device-widget">
+        <div class="widget-title">
+          <span><i class="fa-solid fa-microchip" style="color:var(--primary)"></i> <span id="side-device-id">ESP32-WOLFFIA-01</span></span>
+          <span class="status-badge normal" id="side-status-badge"><span class="pulse-dot online"></span> Online</span>
+        </div>
+        <div style="display:flex; justify-content:space-between; color:var(--text-muted); font-size:0.72rem; margin-top:0.35rem">
+          <span>Wi-Fi RSSI:</span>
+          <span id="side-wifi-rssi" style="font-weight:600; color:var(--text-main)">-58 dBm</span>
+        </div>
+        <div style="display:flex; justify-content:space-between; color:var(--text-muted); font-size:0.72rem; margin-top:0.25rem">
+          <span>เซนเซอร์:</span>
+          <span style="font-weight:600; color:var(--color-success)">4 ตัว (Active)</span>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Content Panel -->
+    <main class="dashboard-main">
+
+      <!-- ====================================================================
+           1. VIEW: DASHBOARD (Overview)
+           ==================================================================== -->
+      <section id="view-dashboard" class="dashboard-section">
+        
+        <!-- Header -->
+        <div class="dashboard-header-bar">
+          <div class="header-title-box">
+            <h2><i class="fa-solid fa-gauge-high" style="color:var(--primary)"></i> แดชบอร์ดภาพรวมระบบเพาะเลี้ยงไข่ผำ</h2>
+            <p>ระบบเพาะเลี้ยงไข่ผำอัจฉริยะเพื่อการผลิตโปรตีนทางเลือก • ติดตามและควบคุมสภาวะแวดล้อมอัตโนมัติ</p>
+          </div>
+          <div class="header-actions">
+            <span class="status-badge normal" id="dash-system-badge">
+              <span class="pulse-dot online"></span> ระบบพร้อมทำงานปกติ
+            </span>
+          </div>
+        </div>
+
+        <!-- 4 Sensor Overview Cards -->
+        <div class="sensor-grid-4">
+          
+          <!-- Temperature Card -->
+          <div class="sensor-card">
+            <div class="sensor-card-top">
+              <div class="sensor-icon-wrapper sensor-icon-temp">
+                <i class="fa-solid fa-temperature-half"></i>
+              </div>
+              <span class="status-badge normal" id="dash-temp-status">ปกติ</span>
+            </div>
+            <div class="sensor-label">อุณหภูมิน้ำ (Water Temp)</div>
+            <div class="sensor-value-group">
+              <span class="sensor-value" id="dash-temp-val">28.4</span>
+              <span class="sensor-unit">°C</span>
+            </div>
+            <div class="sensor-footer">
+              <div class="mini-trend up" id="dash-temp-trend">
+                <i class="fa-solid fa-arrow-trend-up"></i> <span>+0.2°C</span>
+              </div>
+              <div class="optimal-range-text">เกณฑ์: 25.0 - 32.0°C</div>
+            </div>
+          </div>
+
+          <!-- pH Card -->
+          <div class="sensor-card">
+            <div class="sensor-card-top">
+              <div class="sensor-icon-wrapper sensor-icon-ph">
+                <i class="fa-solid fa-flask-vial"></i>
+              </div>
+              <span class="status-badge normal" id="dash-ph-status">ปกติ</span>
+            </div>
+            <div class="sensor-label">ค่าความเป็นกรด-ด่าง (pH)</div>
+            <div class="sensor-value-group">
+              <span class="sensor-value" id="dash-ph-val">6.95</span>
+              <span class="sensor-unit">pH</span>
+            </div>
+            <div class="sensor-footer">
+              <div class="mini-trend down" id="dash-ph-trend">
+                <i class="fa-solid fa-arrow-trend-down"></i> <span>-0.05</span>
+              </div>
+              <div class="optimal-range-text">เกณฑ์: 6.5 - 7.5</div>
+            </div>
+          </div>
+
+          <!-- Water Level Card -->
+          <div class="sensor-card">
+            <div class="sensor-card-top">
+              <div class="sensor-icon-wrapper sensor-icon-water">
+                <i class="fa-solid fa-droplet"></i>
+              </div>
+              <span class="status-badge normal" id="dash-water-status">ปกติ</span>
+            </div>
+            <div class="sensor-label">ระดับน้ำในบ่อเพาะ (Water Level)</div>
+            <div class="sensor-value-group">
+              <span class="sensor-value" id="dash-water-val">78.5</span>
+              <span class="sensor-unit">%</span>
+            </div>
+            <div class="sensor-footer">
+              <div class="mini-trend down" id="dash-water-trend">
+                <i class="fa-solid fa-arrow-trend-down"></i> <span>-0.4%</span>
+              </div>
+              <div class="optimal-range-text">เกณฑ์: 70 - 90%</div>
+            </div>
+          </div>
+
+          <!-- Light Intensity Card -->
+          <div class="sensor-card">
+            <div class="sensor-card-top">
+              <div class="sensor-icon-wrapper sensor-icon-light">
+                <i class="fa-solid fa-sun"></i>
+              </div>
+              <span class="status-badge normal" id="dash-light-status">ปกติ</span>
+            </div>
+            <div class="sensor-label">ความเข้มแสง (Light Intensity)</div>
+            <div class="sensor-value-group">
+              <span class="sensor-value" id="dash-light-val">65.0</span>
+              <span class="sensor-unit">%</span>
+            </div>
+            <div class="sensor-footer">
+              <div class="mini-trend up" id="dash-light-trend">
+                <i class="fa-solid fa-arrow-trend-up"></i> <span>+1.5%</span>
+              </div>
+              <div class="optimal-range-text">เกณฑ์: 50 - 80%</div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- 2 Real-Time Charts -->
+        <div class="charts-grid-2">
+          
+          <!-- Chart 1: Temp & pH Dual Graph -->
+          <div class="chart-card">
+            <div class="chart-header">
+              <div class="chart-title">
+                <i class="fa-solid fa-chart-line" style="color:#ef4444"></i> อุณหภูมิน้ำ (°C) และค่า pH แบบเรียลไทม์
+              </div>
+              <span style="font-size:0.75rem; color:var(--text-muted)">Dual-Axis Time Series</span>
+            </div>
+            <div class="chart-canvas-wrapper">
+              <canvas id="chart-temp-ph"></canvas>
+            </div>
+          </div>
+
+          <!-- Chart 2: Water Level & Light Intensity -->
+          <div class="chart-card">
+            <div class="chart-header">
+              <div class="chart-title">
+                <i class="fa-solid fa-chart-area" style="color:#2563eb"></i> ระดับน้ำ (%) และความเข้มแสง (%)
+              </div>
+              <span style="font-size:0.75rem; color:var(--text-muted)">Environment Metrics</span>
+            </div>
+            <div class="chart-canvas-wrapper">
+              <canvas id="chart-water-light"></canvas>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Bottom Grid: System Status & Recent Activity Feed -->
+        <div class="bottom-grid-2">
+          
+          <!-- System Status Overview -->
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">
+                <i class="fa-solid fa-shield-halved" style="color:var(--primary)"></i> ภาพรวมสถานะระบบฮาร์ดแวร์ IoT
+              </div>
+              <span class="status-badge normal">Online</span>
+            </div>
+            <div class="system-status-list">
+              <div class="status-row-item">
+                <div class="status-row-left">
+                  <i class="fa-solid fa-microchip" style="color:var(--primary)"></i>
+                  <span>ไมโครคอนโทรลเลอร์ (Microcontroller)</span>
+                </div>
+                <div class="status-row-right">
+                  <span id="dash-hw-board">ESP32-WROOM-32D</span>
+                  <span class="status-badge normal" style="font-size:0.7rem">ทำงานปกติ</span>
+                </div>
+              </div>
+              <div class="status-row-item">
+                <div class="status-row-left">
+                  <i class="fa-solid fa-wifi" style="color:var(--color-info)"></i>
+                  <span>สัญญาณ Wi-Fi & RSSI</span>
+                </div>
+                <div class="status-row-right">
+                  <span id="dash-wifi-text">SmartAgri_Wolffia_IoT (-58 dBm)</span>
+                </div>
+              </div>
+              <div class="status-row-item">
+                <div class="status-row-left">
+                  <i class="fa-solid fa-satellite-dish" style="color:var(--color-info)"></i>
+                  <span>การส่งข้อมูลโทรมาตร (Telemetry Stream)</span>
+                </div>
+                <div class="status-row-right">
+                  <span id="dash-telemetry-rate">ความถี่ 2.5s</span>
+                  <span class="status-badge normal" id="dash-telemetry-badge" style="background:#dcfce7; color:#15803d; border:none">ปกติ</span>
+                </div>
+              </div>
+              <div class="status-row-item">
+                <div class="status-row-left">
+                  <i class="fa-solid fa-cloud-arrow-up" style="color:var(--color-purple)"></i>
+                  <span>การเชื่อมต่อระบบฐานข้อมูล (Cloud Sync)</span>
+                </div>
+                <div class="status-row-right">
+                  <span id="dash-cloud-status">เชื่อมต่อพร้อมรับส่งข้อมูล</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Recent Activity Feed -->
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">
+                <i class="fa-solid fa-list-check" style="color:var(--color-info)"></i> บันทึกกิจกรรมล่าสุด (Recent Activity)
+              </div>
+              <span style="font-size:0.75rem; color:var(--text-muted)">5 รายการล่าสุด</span>
+            </div>
+            <div class="activity-feed" id="dash-activity-list">
+              <!-- Rendered dynamically -->
+            </div>
+          </div>
+
+        </div>
+
+      </section>
+
+      <!-- ====================================================================
+           2. VIEW: REAL-TIME MONITORING
+           ==================================================================== -->
+      <section id="view-monitoring" class="dashboard-section" style="display:none">
+        
+        <div class="dashboard-header-bar">
+          <div class="header-title-box">
+            <h2><i class="fa-solid fa-wave-square" style="color:var(--color-info)"></i> ติดตามข้อมูลแบบเรียลไทม์ (Live Monitoring)</h2>
+            <p>กราฟแสดงผลแบบ Rolling Update 30 จุดข้อมูลย้อนหลัง และเกจแสดงผลแบบไดนามิก</p>
+          </div>
+          <div class="header-actions">
+            <span class="status-badge normal"><span class="pulse-dot online"></span> เลื่อนตามเวลาจริง 2.5s</span>
+          </div>
+        </div>
+
+        <!-- Rolling Live Chart -->
+        <div class="card" style="margin-bottom:1.5rem">
+          <div class="card-header">
+            <div class="card-title">
+              <i class="fa-solid fa-chart-line" style="color:var(--primary)"></i> Live Telemetry Rolling Stream (ย้อนหลัง 30 จุด)
+            </div>
+            <span style="font-size:0.75rem; color:var(--text-muted)">Real-time Sliding Window</span>
+          </div>
+          <div class="chart-canvas-wrapper" style="height:280px">
+            <canvas id="chart-monitoring-live"></canvas>
+          </div>
+        </div>
+
+        <!-- 4 Circular Gauge Indicators -->
+        <div class="gauge-grid-4">
+          
+          <div class="gauge-card">
+            <div class="gauge-circle-container">
+              <canvas id="gauge-water" width="130" height="130"></canvas>
+              <div class="gauge-inner-text">
+                <div class="gauge-inner-val" id="gauge-val-water" style="color:#2563eb">78.5%</div>
+                <div class="gauge-inner-label">ระดับน้ำ</div>
+              </div>
+            </div>
+            <h4 style="font-size:0.9rem">ระดับน้ำในบ่อเพาะ</h4>
+            <p style="font-size:0.75rem; color:var(--text-muted); margin-top:0.2rem">เกณฑ์ปกติ: 70 - 90%</p>
+          </div>
+
+          <div class="gauge-card">
+            <div class="gauge-circle-container">
+              <canvas id="gauge-light" width="130" height="130"></canvas>
+              <div class="gauge-inner-text">
+                <div class="gauge-inner-val" id="gauge-val-light" style="color:#d97706">65.0%</div>
+                <div class="gauge-inner-label">ความเข้มแสง</div>
+              </div>
+            </div>
+            <h4 style="font-size:0.9rem">ความเข้มแสงสังเคราะห์</h4>
+            <p style="font-size:0.75rem; color:var(--text-muted); margin-top:0.2rem">เกณฑ์ปกติ: 50 - 80%</p>
+          </div>
+
+          <div class="gauge-card">
+            <div class="gauge-circle-container">
+              <canvas id="gauge-temp" width="130" height="130"></canvas>
+              <div class="gauge-inner-text">
+                <div class="gauge-inner-val" id="gauge-val-temp" style="color:#ef4444">28.4°</div>
+                <div class="gauge-inner-label">อุณหภูมิ</div>
+              </div>
+            </div>
+            <h4 style="font-size:0.9rem">อุณหภูมิน้ำบ่อเพาะ</h4>
+            <p style="font-size:0.75rem; color:var(--text-muted); margin-top:0.2rem">เกณฑ์ปกติ: 25 - 32°C</p>
+          </div>
+
+          <div class="gauge-card">
+            <div class="gauge-circle-container">
+              <canvas id="gauge-ph" width="130" height="130"></canvas>
+              <div class="gauge-inner-text">
+                <div class="gauge-inner-val" id="gauge-val-ph" style="color:#6366f1">6.95</div>
+                <div class="gauge-inner-label">pH สารละลาย</div>
+              </div>
+            </div>
+            <h4 style="font-size:0.9rem">ค่ากรด-ด่าง (pH)</h4>
+            <p style="font-size:0.75rem; color:var(--text-muted); margin-top:0.2rem">เกณฑ์ปกติ: 6.5 - 7.5</p>
+          </div>
+
+        </div>
+
+        <!-- Device Connection Details Card -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">
+              <i class="fa-solid fa-network-wired" style="color:var(--color-info)"></i> รายละเอียดการเชื่อมต่ออุปกรณ์ฮาร์ดแวร์ (Device Connection Details)
+            </div>
+            <span class="status-badge normal">ESP32 Connected</span>
+          </div>
+          <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:1.25rem">
+            <div>
+              <span style="font-size:0.75rem; color:var(--text-muted)">Device Identifier</span>
+              <div style="font-weight:700; font-size:1.1rem; color:var(--text-main); margin-top:0.2rem" id="mon-device-id">ESP32-WOLFFIA-01</div>
+              <span style="font-size:0.75rem; color:var(--color-normal)">● Online & Transmitting</span>
+            </div>
+            <div>
+              <span style="font-size:0.75rem; color:var(--text-muted)">IP Address & MAC</span>
+              <div style="font-weight:600; font-size:0.95rem; margin-top:0.2rem" id="mon-ip">192.168.1.145</div>
+              <span style="font-size:0.75rem; color:var(--text-muted)" id="mon-mac">MAC: 24:6F:28:7A:B1:0C</span>
+            </div>
+            <div>
+              <span style="font-size:0.75rem; color:var(--text-muted)">สถานะ Wi-Fi & ความแรงสัญญาณ RSSI</span>
+              <div style="font-weight:600; font-size:0.95rem; margin-top:0.2rem" id="mon-rssi">-58 dBm (สัญญาณดีเยี่ยม)</div>
+              <span style="font-size:0.75rem; color:var(--text-muted)" id="mon-ssid">SSID: SmartAgri_Wolffia_IoT</span>
+            </div>
+            <div>
+              <span style="font-size:0.75rem; color:var(--text-muted)">Ping Latency & Telemetry Health</span>
+              <div style="font-weight:600; font-size:0.95rem; margin-top:0.2rem" id="mon-ping">24 ms (การตอบสนองเร็ว)</div>
+              <span style="font-size:0.75rem; color:var(--color-success)" id="mon-telemetry">Telemetry: Active (2.5s)</span>
+            </div>
+          </div>
+        </div>
+
+      </section>
+
+      <!-- ====================================================================
+           3. VIEW: SENSORS (Sensor Management)
+           ==================================================================== -->
+      <section id="view-sensors" class="dashboard-section" style="display:none">
+        
+        <div class="dashboard-header-bar">
+          <div class="header-title-box">
+            <h2><i class="fa-solid fa-microchip" style="color:var(--primary)"></i> การจัดการเซนเซอร์ตรวจวัด (Sensors Management)</h2>
+            <p>ตรวจสอบสถานะการเชื่อมต่อ ฮาร์ดแวร์เซนเซอร์แต่ละตัว สถิติย้อนหลัง 24 ชม. และ Sparkline</p>
+          </div>
+        </div>
+
+        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(280px, 1fr)); gap:1.25rem">
+          
+          <!-- Sensor 1: DS18B20 Temp Sensor -->
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title" style="font-size:0.95rem">
+                <i class="fa-solid fa-temperature-three-quarters" style="color:#ef4444"></i> เซนเซอร์อุณหภูมิน้ำ (DS18B20)
+              </div>
+              <span class="status-badge normal"><span class="pulse-dot online"></span> Connected</span>
+            </div>
+            <div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:0.75rem">
+              <div>
+                <span style="font-size:0.75rem; color:var(--text-muted)">ค่าที่อ่านได้ปัจจุบัน</span>
+                <div style="font-size:1.8rem; font-weight:700; font-family:var(--font-heading)" id="sens-temp-val">28.4 °C</div>
+              </div>
+              <div style="text-align:right">
+                <span style="font-size:0.75rem; color:var(--text-muted)">ช่วงปกติที่ตั้งไว้</span>
+                <div style="font-size:0.85rem; font-weight:600; color:var(--primary)" id="sens-temp-range">25.0 - 32.0 °C</div>
+              </div>
+            </div>
+            <!-- 24h Min/Max/Avg -->
+            <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:0.5rem; background:var(--bg-surface-subtle); padding:0.6rem; border-radius:var(--radius-md); font-size:0.75rem; margin-bottom:0.75rem; text-align:center">
+              <div><span style="color:var(--text-muted)">ต่ำสุด (Min)</span><div style="font-weight:700" id="sens-temp-min">26.1°C</div></div>
+              <div><span style="color:var(--text-muted)">เฉลี่ย (Avg)</span><div style="font-weight:700" id="sens-temp-avg">28.3°C</div></div>
+              <div><span style="color:var(--text-muted)">สูงสุด (Max)</span><div style="font-weight:700" id="sens-temp-max">31.2°C</div></div>
+            </div>
+            <!-- Sparkline -->
+            <div style="height:60px">
+              <canvas id="spark-temp"></canvas>
+            </div>
+            <div style="font-size:0.72rem; color:var(--text-muted); margin-top:0.5rem">
+              GPIO Pin: 4 (One-Wire Bus) • เซ็นเซอร์กันน้ำสเตนเลสสตีล
+            </div>
+          </div>
+
+          <!-- Sensor 2: pH-4502C Sensor -->
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title" style="font-size:0.95rem">
+                <i class="fa-solid fa-flask-vial" style="color:#6366f1"></i> เซนเซอร์วัดกรด-ด่าง (pH-4502C)
+              </div>
+              <span class="status-badge normal"><span class="pulse-dot online"></span> Connected</span>
+            </div>
+            <div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:0.75rem">
+              <div>
+                <span style="font-size:0.75rem; color:var(--text-muted)">ค่าที่อ่านได้ปัจจุบัน</span>
+                <div style="font-size:1.8rem; font-weight:700; font-family:var(--font-heading)" id="sens-ph-val">6.95 pH</div>
+              </div>
+              <div style="text-align:right">
+                <span style="font-size:0.75rem; color:var(--text-muted)">ช่วงปกติที่ตั้งไว้</span>
+                <div style="font-size:0.85rem; font-weight:600; color:var(--primary)" id="sens-ph-range">6.5 - 7.5</div>
+              </div>
+            </div>
+            <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:0.5rem; background:var(--bg-surface-subtle); padding:0.6rem; border-radius:var(--radius-md); font-size:0.75rem; margin-bottom:0.75rem; text-align:center">
+              <div><span style="color:var(--text-muted)">ต่ำสุด (Min)</span><div style="font-weight:700" id="sens-ph-min">6.81</div></div>
+              <div><span style="color:var(--text-muted)">เฉลี่ย (Avg)</span><div style="font-weight:700" id="sens-ph-avg">6.96</div></div>
+              <div><span style="color:var(--text-muted)">สูงสุด (Max)</span><div style="font-weight:700" id="sens-ph-max">7.18</div></div>
+            </div>
+            <div style="height:60px">
+              <canvas id="spark-ph"></canvas>
+            </div>
+            <div style="font-size:0.72rem; color:var(--text-muted); margin-top:0.5rem">
+              GPIO Pin: 34 (ADC1 Channel 6) • หัวโพรบแก้วอิเล็กโทรดพร้อมวงจรกรอง
+            </div>
+          </div>
+
+          <!-- Sensor 3: Ultrasonic Water Level Sensor -->
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title" style="font-size:0.95rem">
+                <i class="fa-solid fa-water" style="color:#2563eb"></i> เซนเซอร์ระดับน้ำ (JSN-SR04T)
+              </div>
+              <span class="status-badge normal"><span class="pulse-dot online"></span> Connected</span>
+            </div>
+            <div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:0.75rem">
+              <div>
+                <span style="font-size:0.75rem; color:var(--text-muted)">ค่าที่อ่านได้ปัจจุบัน</span>
+                <div style="font-size:1.8rem; font-weight:700; font-family:var(--font-heading)" id="sens-water-val">78.5 %</div>
+              </div>
+              <div style="text-align:right">
+                <span style="font-size:0.75rem; color:var(--text-muted)">ช่วงปกติที่ตั้งไว้</span>
+                <div style="font-size:0.85rem; font-weight:600; color:var(--primary)" id="sens-water-range">70 - 90 %</div>
+              </div>
+            </div>
+            <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:0.5rem; background:var(--bg-surface-subtle); padding:0.6rem; border-radius:var(--radius-md); font-size:0.75rem; margin-bottom:0.75rem; text-align:center">
+              <div><span style="color:var(--text-muted)">ต่ำสุด (Min)</span><div style="font-weight:700" id="sens-water-min">68.5%</div></div>
+              <div><span style="color:var(--text-muted)">เฉลี่ย (Avg)</span><div style="font-weight:700" id="sens-water-avg">79.2%</div></div>
+              <div><span style="color:var(--text-muted)">สูงสุด (Max)</span><div style="font-weight:700" id="sens-water-max">88.0%</div></div>
+            </div>
+            <div style="height:60px">
+              <canvas id="spark-water"></canvas>
+            </div>
+            <div style="font-size:0.72rem; color:var(--text-muted); margin-top:0.5rem">
+              GPIO Pin: 5 (Trig) / 18 (Echo) • คลื่นอัลตราโซนิกกันน้ำแบบไม่สัมผัสผิวน้ำ
+            </div>
+          </div>
+
+          <!-- Sensor 4: BH1750 Light Sensor -->
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title" style="font-size:0.95rem">
+                <i class="fa-solid fa-sun" style="color:#d97706"></i> เซนเซอร์วัดแสง (BH1750 I2C)
+              </div>
+              <span class="status-badge normal"><span class="pulse-dot online"></span> Connected</span>
+            </div>
+            <div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:0.75rem">
+              <div>
+                <span style="font-size:0.75rem; color:var(--text-muted)">ค่าที่อ่านได้ปัจจุบัน</span>
+                <div style="font-size:1.8rem; font-weight:700; font-family:var(--font-heading)" id="sens-light-val">65.0 %</div>
+              </div>
+              <div style="text-align:right">
+                <span style="font-size:0.75rem; color:var(--text-muted)">ช่วงปกติที่ตั้งไว้</span>
+                <div style="font-size:0.85rem; font-weight:600; color:var(--primary)" id="sens-light-range">50 - 80 %</div>
+              </div>
+            </div>
+            <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:0.5rem; background:var(--bg-surface-subtle); padding:0.6rem; border-radius:var(--radius-md); font-size:0.75rem; margin-bottom:0.75rem; text-align:center">
+              <div><span style="color:var(--text-muted)">ต่ำสุด (Min)</span><div style="font-weight:700" id="sens-light-min">2.0%</div></div>
+              <div><span style="color:var(--text-muted)">เฉลี่ย (Avg)</span><div style="font-weight:700" id="sens-light-avg">58.4%</div></div>
+              <div><span style="color:var(--text-muted)">สูงสุด (Max)</span><div style="font-weight:700" id="sens-light-max">76.5%</div></div>
+            </div>
+            <div style="height:60px">
+              <canvas id="spark-light"></canvas>
+            </div>
+            <div style="font-size:0.72rem; color:var(--text-muted); margin-top:0.5rem">
+              GPIO Pin: 21 (SDA) / 22 (SCL) • ดิจิทัลเซ็นเซอร์วัดลักซ์ความละเอียดสูง
+            </div>
+          </div>
+
+        </div>
+
+      </section>
+
+      <!-- ====================================================================
+           4. VIEW: HISTORY (Data Management)
+           ==================================================================== -->
+      <section id="view-history" class="dashboard-section" style="display:none">
+        
+        <div class="dashboard-header-bar">
+          <div class="header-title-box">
+            <h2><i class="fa-solid fa-clock-rotate-left" style="color:var(--primary)"></i> ประวัติข้อมูลและบันทึกตรวจวัด (Data Management)</h2>
+            <p>สืบค้นข้อมูลเทเลเมทรีจาก Central Data Engine พร้อมระบบกรองข้อมูลและดาวน์โหลด CSV</p>
+          </div>
+          <div class="header-actions">
+            <button class="btn btn-primary" onclick="exportDataCsv()">
+              <i class="fa-solid fa-file-csv"></i> ส่งออกข้อมูล CSV
+            </button>
+          </div>
+        </div>
+
+        <!-- Summary Bar -->
+        <div class="card" style="padding:0.85rem 1.25rem; margin-bottom:1.25rem; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem">
+          <div>
+            <span style="font-size:0.8rem; color:var(--text-muted)">จำนวนเรคคอร์ดทั้งหมดในหน่วยความจำ:</span>
+            <span style="font-weight:700; color:var(--primary); font-size:1.1rem; margin-left:0.4rem" id="hist-total-count">0</span>
+            <span style="font-size:0.8rem; color:var(--text-muted)">รายการ</span>
+          </div>
+          <div>
+            <span style="font-size:0.8rem; color:var(--text-muted)">ช่วงเวลาข้อมูล:</span>
+            <span style="font-weight:600; font-size:0.85rem" id="hist-time-range">-</span>
+          </div>
+        </div>
+
+        <!-- Filter Bar -->
+        <div class="filter-bar">
+          <div class="filter-group">
+            <span class="filter-label"><i class="fa-regular fa-calendar"></i> ช่วงเวลา:</span>
+            <select class="form-select" id="hist-filter-timerange" onchange="applyHistoryFilters()">
+              <option value="all">ทั้งหมด (All Records)</option>
+              <option value="today">วันนี้ (Today)</option>
+              <option value="24h" selected>24 ชั่วโมงล่าสุด (Last 24h)</option>
+              <option value="1h">1 ชั่วโมงล่าสุด (Last 1h)</option>
+            </select>
+          </div>
+
+          <div class="filter-group">
+            <span class="filter-label"><i class="fa-solid fa-filter"></i> สถานะ:</span>
+            <select class="form-select" id="hist-filter-status" onchange="applyHistoryFilters()">
+              <option value="all">ทุกระดับสถานะ</option>
+              <option value="normal">ปกติ (Normal)</option>
+              <option value="warning">เฝ้าระวัง / นอกเกณฑ์</option>
+            </select>
+          </div>
+
+          <div class="search-input-box">
+            <i class="fa-solid fa-magnifying-glass"></i>
+            <input type="text" class="form-input" id="hist-search-input" placeholder="ค้นหาเวลา, ค่า, ปั๊ม..." oninput="applyHistoryFilters()">
+          </div>
+
+          <button class="btn btn-outline btn-sm" onclick="resetHistoryFilters()">
+            <i class="fa-solid fa-arrow-rotate-left"></i> รีเซ็ตตัวกรอง
+          </button>
+        </div>
+
+        <!-- Data Table -->
+        <div class="table-container">
+          <table class="custom-table">
+            <thead>
+              <tr>
+                <th>วันและเวลา (Timestamp)</th>
+                <th>อุณหภูมิน้ำ (°C)</th>
+                <th>ค่า pH</th>
+                <th>ระดับน้ำ (%)</th>
+                <th>ความเข้มแสง (%)</th>
+                <th>สถานะอุปกรณ์</th>
+              </tr>
+            </thead>
+            <tbody id="hist-table-body">
+              <!-- Rendered by JS -->
+            </tbody>
+          </table>
+
+          <!-- Pagination Bar -->
+          <div class="pagination-bar">
+            <div>
+              <span>แสดงแถวต่อหน้า: </span>
+              <select class="form-select" id="hist-page-size" onchange="changeHistoryPageSize(this.value)" style="padding:0.2rem 0.5rem">
+                <option value="10">10</option>
+                <option value="20" selected>20</option>
+                <option value="50">50</option>
+              </select>
+              <span style="margin-left:0.8rem" id="hist-page-info">แสดง 1 - 20 จาก 0 รายการ</span>
+            </div>
+            <div class="pagination-controls" id="hist-pagination-controls">
+              <!-- Pagination buttons -->
+            </div>
+          </div>
+        </div>
+
+      </section>
+
+      <!-- ====================================================================
+           5. VIEW: STATISTICS (วิเคราะห์สถิติ - คำนวณจาก History จริง)
+           ==================================================================== -->
+      <section id="view-statistics" class="dashboard-section" style="display:none">
+        
+        <div class="dashboard-header-bar">
+          <div class="header-title-box">
+            <h2><i class="fa-solid fa-chart-line" style="color:var(--primary)"></i> สถิติการตรวจวัดสภาพแวดล้อม (Statistical Analysis)</h2>
+            <p>คำนวณจากชุดข้อมูลประวัติการตรวจวัดจริง (ค่าเฉลี่ย, มินิมัม, แมกซิมัม และค่าเบี่ยงเบนมาตรฐาน SD)</p>
+          </div>
+          <div class="header-actions">
+            <span class="status-badge normal"><i class="fa-solid fa-calculator"></i> Real Historical Math</span>
+          </div>
+        </div>
+
+        <!-- 4 Stat Cards with Standard Deviation & Sparklines -->
+        <div class="stats-metric-grid">
+          
+          <!-- Temp Stats -->
+          <div class="stat-metric-card">
+            <div class="stat-metric-header">
+              <span><i class="fa-solid fa-temperature-half" style="color:#ef4444"></i> อุณหภูมิน้ำ (Temperature)</span>
+              <span style="font-size:0.75rem; color:var(--text-muted)">หน่วย: °C</span>
+            </div>
+            <div class="stat-values-list">
+              <div class="stat-val-item">
+                <span style="color:var(--text-muted)">ค่าเฉลี่ย (Mean):</span>
+                <span style="font-weight:700; color:var(--text-main)" id="stat-temp-avg">-</span>
+              </div>
+              <div class="stat-val-item">
+                <span style="color:var(--text-muted)">ค่าต่ำสุด (Min):</span>
+                <span style="font-weight:600" id="stat-temp-min">-</span>
+              </div>
+              <div class="stat-val-item">
+                <span style="color:var(--text-muted)">ค่าสูงสุด (Max):</span>
+                <span style="font-weight:600" id="stat-temp-max">-</span>
+              </div>
+              <div class="stat-val-item">
+                <span style="color:var(--text-muted)">ส่วนเบี่ยงเบนมาตรฐาน (SD):</span>
+                <span style="font-weight:700; color:#ef4444" id="stat-temp-sd">±0.00</span>
+              </div>
+            </div>
+            <div class="stat-spark-wrapper">
+              <canvas id="chart-stat-spark-temp"></canvas>
+            </div>
+          </div>
+
+          <!-- pH Stats -->
+          <div class="stat-metric-card">
+            <div class="stat-metric-header">
+              <span><i class="fa-solid fa-flask-vial" style="color:#6366f1"></i> ความเป็นกรด-ด่าง (pH)</span>
+              <span style="font-size:0.75rem; color:var(--text-muted)">Scale: 0-14</span>
+            </div>
+            <div class="stat-values-list">
+              <div class="stat-val-item">
+                <span style="color:var(--text-muted)">ค่าเฉลี่ย (Mean):</span>
+                <span style="font-weight:700; color:var(--text-main)" id="stat-ph-avg">-</span>
+              </div>
+              <div class="stat-val-item">
+                <span style="color:var(--text-muted)">ค่าต่ำสุด (Min):</span>
+                <span style="font-weight:600" id="stat-ph-min">-</span>
+              </div>
+              <div class="stat-val-item">
+                <span style="color:var(--text-muted)">ค่าสูงสุด (Max):</span>
+                <span style="font-weight:600" id="stat-ph-max">-</span>
+              </div>
+              <div class="stat-val-item">
+                <span style="color:var(--text-muted)">ส่วนเบี่ยงเบนมาตรฐาน (SD):</span>
+                <span style="font-weight:700; color:#6366f1" id="stat-ph-sd">±0.00</span>
+              </div>
+            </div>
+            <div class="stat-spark-wrapper">
+              <canvas id="chart-stat-spark-ph"></canvas>
+            </div>
+          </div>
+
+          <!-- Water Level Stats -->
+          <div class="stat-metric-card">
+            <div class="stat-metric-header">
+              <span><i class="fa-solid fa-droplet" style="color:#2563eb"></i> ระดับน้ำ (Water Level)</span>
+              <span style="font-size:0.75rem; color:var(--text-muted)">หน่วย: %</span>
+            </div>
+            <div class="stat-values-list">
+              <div class="stat-val-item">
+                <span style="color:var(--text-muted)">ค่าเฉลี่ย (Mean):</span>
+                <span style="font-weight:700; color:var(--text-main)" id="stat-water-avg">-</span>
+              </div>
+              <div class="stat-val-item">
+                <span style="color:var(--text-muted)">ค่าต่ำสุด (Min):</span>
+                <span style="font-weight:600" id="stat-water-min">-</span>
+              </div>
+              <div class="stat-val-item">
+                <span style="color:var(--text-muted)">ค่าสูงสุด (Max):</span>
+                <span style="font-weight:600" id="stat-water-max">-</span>
+              </div>
+              <div class="stat-val-item">
+                <span style="color:var(--text-muted)">ส่วนเบี่ยงเบนมาตรฐาน (SD):</span>
+                <span style="font-weight:700; color:#2563eb" id="stat-water-sd">±0.00</span>
+              </div>
+            </div>
+            <div class="stat-spark-wrapper">
+              <canvas id="chart-stat-spark-water"></canvas>
+            </div>
+          </div>
+
+          <!-- Light Stats -->
+          <div class="stat-metric-card">
+            <div class="stat-metric-header">
+              <span><i class="fa-solid fa-sun" style="color:#d97706"></i> ความเข้มแสง (Light)</span>
+              <span style="font-size:0.75rem; color:var(--text-muted)">หน่วย: %</span>
+            </div>
+            <div class="stat-values-list">
+              <div class="stat-val-item">
+                <span style="color:var(--text-muted)">ค่าเฉลี่ย (Mean):</span>
+                <span style="font-weight:700; color:var(--text-main)" id="stat-light-avg">-</span>
+              </div>
+              <div class="stat-val-item">
+                <span style="color:var(--text-muted)">ค่าต่ำสุด (Min):</span>
+                <span style="font-weight:600" id="stat-light-min">-</span>
+              </div>
+              <div class="stat-val-item">
+                <span style="color:var(--text-muted)">ค่าสูงสุด (Max):</span>
+                <span style="font-weight:600" id="stat-light-max">-</span>
+              </div>
+              <div class="stat-val-item">
+                <span style="color:var(--text-muted)">ส่วนเบี่ยงเบนมาตรฐาน (SD):</span>
+                <span style="font-weight:700; color:#d97706" id="stat-light-sd">±0.00</span>
+              </div>
+            </div>
+            <div class="stat-spark-wrapper">
+              <canvas id="chart-stat-spark-light"></canvas>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Weekly Summary Table -->
+        <div class="card" style="margin-top:1.5rem">
+          <div class="card-header">
+            <div class="card-title">
+              <i class="fa-solid fa-calendar-week" style="color:var(--primary)"></i> ตารางสรุปค่าเฉลี่ยรายวันรอบสัปดาห์ (Weekly Summary)
+            </div>
+            <span class="status-badge normal">7-Day Aggregated Data</span>
+          </div>
+          <div class="table-container" style="box-shadow:none; border:none">
+            <table class="custom-table">
+              <thead>
+                <tr>
+                  <th>วัน</th>
+                  <th>Avg Temp</th>
+                  <th>Avg pH</th>
+                  <th>Avg Water</th>
+                  <th>Avg Light</th>
+                  <th>ดัชนีการเติบโต</th>
+                </tr>
+              </thead>
+              <tbody id="stat-weekly-table-body">
+                <!-- Rendered by JS -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </section>
+
+      <!-- ====================================================================
+           6. VIEW: ANALYTICS (วิเคราะห์สภาพแวดล้อมอัจฉริยะ)
+           ==================================================================== -->
+      <section id="view-analytics" class="dashboard-section" style="display:none">
+        
+        <div class="dashboard-header-bar">
+          <div class="header-title-box">
+            <h2><i class="fa-solid fa-brain" style="color:var(--primary)"></i> วิเคราะห์สภาพแวดล้อมอัจฉริยะ (Agronomy Analytics)</h2>
+            <p>คะแนนความเหมาะสมต่อการเจริญเติบโตของไข่ผำ (Wolffia Health Score) และการตรวจจับข้อผิดพลาด</p>
+          </div>
+        </div>
+
+        <!-- Environmental Health Score Card -->
+        <div class="health-score-card">
+          <div class="health-radial-box" id="health-radial-elem" style="--score-angle: 92%">
+            <div class="health-radial-inner">
+              <span class="health-radial-score" id="health-score-num">92</span>
+              <span class="health-radial-unit">คะแนน / 100</span>
+            </div>
+          </div>
+          <div class="health-info-box">
+            <span class="health-status-badge" id="health-status-badge">
+              <i class="fa-solid fa-circle-check"></i> ยอดเยี่ยม (Optimal Cultivation Condition)
+            </span>
+            <h3 style="font-size:1.15rem; margin-bottom:0.35rem">สภาพแวดล้อมสมบูรณ์แบบต่อการแบ่งตัวและสร้างโปรตีน</h3>
+            <p style="font-size:0.85rem; color:var(--text-secondary)">
+              ระบบคำนวณถ่วงน้ำหนักจากอุณหภูมิ (30%), pH (30%), ระดับน้ำ (20%) และความเข้มแสง (20%) เทียบกับชุดสเปกตรัมที่เหมาะสมที่สุดของไข่ผำสายพันธุ์ Wolffia globosa
+            </p>
+            <div class="health-breakdown-bar">
+              <div class="health-sub-metric">
+                <span style="color:var(--text-muted)">อุณหภูมิน้ำ:</span>
+                <span style="font-weight:700; float:right" id="health-sub-temp">95%</span>
+              </div>
+              <div class="health-sub-metric">
+                <span style="color:var(--text-muted)">ความสมดุล pH:</span>
+                <span style="font-weight:700; float:right" id="health-sub-ph">93%</span>
+              </div>
+              <div class="health-sub-metric">
+                <span style="color:var(--text-muted)">ระดับน้ำในบ่อ:</span>
+                <span style="font-weight:700; float:right" id="health-sub-water">90%</span>
+              </div>
+              <div class="health-sub-metric">
+                <span style="color:var(--text-muted)">ความเข้มแสง:</span>
+                <span style="font-weight:700; float:right" id="health-sub-light">89%</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Dynamic System Insights -->
+        <div class="card" style="margin-bottom:1.5rem">
+          <div class="card-header">
+            <div class="card-title">
+              <i class="fa-solid fa-lightbulb" style="color:#f59e0b"></i> ข้อเสนอแนะเชิงชีววิทยาอัตโนมัติ (Dynamic Agronomy Insights)
+            </div>
+            <span style="font-size:0.75rem; color:var(--text-muted)">AI Generated from Telemetry</span>
+          </div>
+          <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(260px, 1fr)); gap:1rem" id="analytics-insights-grid">
+            <!-- Rendered by JS -->
+          </div>
+        </div>
+
+        <!-- Anomaly Detection Table -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">
+              <i class="fa-solid fa-triangle-exclamation" style="color:var(--color-critical)"></i> ตรวจจับความผิดปกติของข้อมูล (Anomaly Detection Log)
+            </div>
+            <span style="font-size:0.75rem; color:var(--text-muted)">Threshold Violation Watchdog</span>
+          </div>
+          <div class="table-container" style="box-shadow:none; border:none">
+            <table class="custom-table">
+              <thead>
+                <tr>
+                  <th>เวลาที่ตรวจพบ</th>
+                  <th>พารามิเตอร์</th>
+                  <th>ค่าที่บันทึกได้</th>
+                  <th>เกณฑ์ที่กำหนดไว้</th>
+                  <th>ระดับความรุนแรง</th>
+                  <th>ข้อสังเกต / การวิเคราะห์</th>
+                </tr>
+              </thead>
+              <tbody id="analytics-anomaly-table-body">
+                <!-- Rendered by JS -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </section>
+
+      <!-- ====================================================================
+           7. VIEW: ALERTS & NOTIFICATIONS
+           ==================================================================== -->
+      <section id="view-alerts" class="dashboard-section" style="display:none">
+        
+        <div class="dashboard-header-bar">
+          <div class="header-title-box">
+            <h2><i class="fa-solid fa-triangle-exclamation" style="color:var(--color-warning)"></i> ศูนย์การแจ้งเตือนและข้อผิดพลาด (Alerts & Notifications)</h2>
+            <p>รายการแจ้งเตือนสภาวะแวดล้อมที่หลุดเกณฑ์ความปลอดภัย พร้อมระบบเคลียร์สถานะ</p>
+          </div>
+          <div class="header-actions">
+            <button class="btn btn-outline btn-sm" onclick="clearResolvedAlerts()">
+              <i class="fa-solid fa-check-double"></i> ล้างรายการที่แก้ไขแล้ว
+            </button>
+          </div>
+        </div>
+
+        <!-- Alert Summary Counters -->
+        <div class="alert-counter-grid">
+          <div class="alert-counter-card" style="border-left:4px solid var(--color-critical)">
+            <i class="fa-solid fa-circle-exclamation" style="color:var(--color-critical); font-size:1.75rem"></i>
+            <div>
+              <div class="alert-counter-num" id="cnt-alert-critical" style="color:var(--color-critical)">0</div>
+              <span style="font-size:0.78rem; color:var(--text-muted)">วิกฤต (Critical)</span>
+            </div>
+          </div>
+          <div class="alert-counter-card" style="border-left:4px solid var(--color-warning)">
+            <i class="fa-solid fa-triangle-exclamation" style="color:var(--color-warning); font-size:1.75rem"></i>
+            <div>
+              <div class="alert-counter-num" id="cnt-alert-warning" style="color:var(--color-warning)">0</div>
+              <span style="font-size:0.78rem; color:var(--text-muted)">เฝ้าระวัง (Warning)</span>
+            </div>
+          </div>
+          <div class="alert-counter-card" style="border-left:4px solid var(--color-normal)">
+            <i class="fa-solid fa-circle-check" style="color:var(--color-normal); font-size:1.75rem"></i>
+            <div>
+              <div class="alert-counter-num" id="cnt-alert-resolved" style="color:var(--color-normal)">2</div>
+              <span style="font-size:0.78rem; color:var(--text-muted)">แก้ไขแล้ว (Resolved)</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Filter Tabs -->
+        <div style="display:flex; gap:0.5rem; margin-bottom:1.25rem">
+          <button class="btn btn-primary btn-sm alert-tab-btn active" data-tab="all" onclick="filterAlertsTab('all')">ทั้งหมด (All)</button>
+          <button class="btn btn-outline btn-sm alert-tab-btn" data-tab="critical" onclick="filterAlertsTab('critical')">วิกฤต (Critical)</button>
+          <button class="btn btn-outline btn-sm alert-tab-btn" data-tab="warning" onclick="filterAlertsTab('warning')">เฝ้าระวัง (Warning)</button>
+          <button class="btn btn-outline btn-sm alert-tab-btn" data-tab="resolved" onclick="filterAlertsTab('resolved')">แก้ไขแล้ว (Resolved)</button>
+        </div>
+
+        <!-- Timeline Feed -->
+        <div id="alerts-timeline-container">
+          <!-- Rendered by JS -->
+        </div>
+
+      </section>
+
+      <!-- ====================================================================
+           9. VIEW: REPORTS & EXPORT
+           ==================================================================== -->
+      <section id="view-reports" class="dashboard-section" style="display:none">
+        
+        <div class="dashboard-header-bar">
+          <div class="header-title-box">
+            <h2><i class="fa-solid fa-file-invoice" style="color:var(--primary)"></i> รายงานสรุปเชิงผู้บริหารและวิจัย (Executive Report)</h2>
+            <p>สรุปผลการเพาะเลี้ยงไข่ผำเพื่อนำเสนอโครงงานวิจัยปริญญานิพนธ์และเอกสารวิชาการ</p>
+          </div>
+          <div class="header-actions">
+            <button class="btn btn-outline" onclick="window.print()">
+              <i class="fa-solid fa-print"></i> พิมพ์ / บันทึก PDF
+            </button>
+            <button class="btn btn-primary" onclick="exportDataCsv()">
+              <i class="fa-solid fa-file-arrow-down"></i> ส่งออกข้อมูล CSV
+            </button>
+          </div>
+        </div>
+
+        <!-- Report Filter Bar -->
+        <div class="filter-bar no-print">
+          <div class="filter-group">
+            <span class="filter-label"><i class="fa-regular fa-calendar-days"></i> ช่วงเวลาประเมินผล:</span>
+            <select class="form-select" id="report-timerange" onchange="generateReport()">
+              <option value="today">วันนี้ (Today)</option>
+              <option value="7d" selected>7 วันล่าสุด (Last 7 Days)</option>
+              <option value="30d">30 วันล่าสุด (Last 30 Days)</option>
+              <option value="all">ข้อมูลทั้งหมด (All Time)</option>
+            </select>
+          </div>
+          <button class="btn btn-primary btn-sm" onclick="generateReport()">
+            <i class="fa-solid fa-arrows-rotate"></i> คำนวณรายงานใหม่ (Generate Report)
+          </button>
+        </div>
+
+        <!-- Printable Executive Report Document -->
+        <div class="card" id="printable-report-area">
+          <div style="border-bottom:2px solid var(--primary); padding-bottom:1rem; margin-bottom:1.5rem; display:flex; justify-content:space-between; align-items:flex-end">
+            <div>
+              <span class="badge-version" style="margin-bottom:0.4rem; display:inline-block">โครงงานวิจัยปริญญานิพนธ์ IoT Smart Agriculture</span>
+              <h2 style="font-size:1.45rem; color:var(--text-main)">รายงานสรุปการทำงานระบบเพาะเลี้ยงไข่ผำอัจฉริยะ (Smart Wolffia System)</h2>
+              <p style="font-size:0.85rem; color:var(--text-muted); margin-top:0.2rem">อุปกรณ์: ESP32-WOLFFIA-01 • แพลตฟอร์มคลาวด์และเอดจ์คอมพิวติ้ง</p>
+            </div>
+            <div style="text-align:right">
+              <span style="font-size:0.75rem; color:var(--text-muted)">พิมพ์รายงานเมื่อ:</span>
+              <div style="font-weight:600; font-size:0.85rem" id="rep-generated-date">-</div>
+            </div>
+          </div>
+
+          <!-- Section 1: Executive Summary -->
+          <div style="margin-bottom:1.75rem">
+            <h3 style="font-size:1.05rem; margin-bottom:0.75rem; color:var(--primary)">1. สรุปผลการดำเนินงานเชิงสถิติ (Executive Summary)</h3>
+            <div style="display:grid; grid-template-columns:repeat(4, 1fr); gap:1rem; text-align:center" class="stats-metric-grid">
+              <div style="background:var(--bg-surface-subtle); padding:1rem; border-radius:var(--radius-md)">
+                <span style="font-size:0.75rem; color:var(--text-muted)">อุณหภูมิน้ำเฉลี่ย</span>
+                <div style="font-size:1.5rem; font-weight:700; color:#ef4444" id="rep-avg-temp">28.3 °C</div>
+                <span style="font-size:0.72rem; color:var(--color-normal)">อยู่ในเกณฑ์สมบูรณ์</span>
+              </div>
+              <div style="background:var(--bg-surface-subtle); padding:1rem; border-radius:var(--radius-md)">
+                <span style="font-size:0.75rem; color:var(--text-muted)">ค่า pH เฉลี่ย</span>
+                <div style="font-size:1.5rem; font-weight:700; color:#6366f1" id="rep-avg-ph">6.95</div>
+                <span style="font-size:0.72rem; color:var(--color-normal)">สมดุลกรด-ด่างดีเยี่ยม</span>
+              </div>
+              <div style="background:var(--bg-surface-subtle); padding:1rem; border-radius:var(--radius-md)">
+                <span style="font-size:0.75rem; color:var(--text-muted)">ระดับน้ำเฉลี่ย</span>
+                <div style="font-size:1.5rem; font-weight:700; color:#2563eb" id="rep-avg-water">79.2 %</div>
+                <span style="font-size:0.72rem; color:var(--color-normal)">ระดับน้ำอยู่ในเกณฑ์เหมาะสม</span>
+              </div>
+              <div style="background:var(--bg-surface-subtle); padding:1rem; border-radius:var(--radius-md)">
+                <span style="font-size:0.75rem; color:var(--text-muted)">ความเข้มแสงเฉลี่ย</span>
+                <div style="font-size:1.5rem; font-weight:700; color:#d97706" id="rep-avg-light">64.8 %</div>
+                <span style="font-size:0.72rem; color:var(--color-normal)">เพียงพอต่อการสังเคราะห์แสง</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Section 2: Anomaly & Incident Log -->
+          <div>
+            <h3 style="font-size:1.05rem; margin-bottom:0.75rem; color:var(--primary)">2. สรุปประวัติเหตุการณ์ผิดปกติ (Incident Log)</h3>
+            <div class="table-container" style="box-shadow:none; border:none">
+              <table class="custom-table">
+                <thead>
+                  <tr>
+                    <th>วันและเวลา</th>
+                    <th>ประเภทเหตุการณ์</th>
+                    <th>ค่าที่บันทึก</th>
+                    <th>การจัดการและสถานะการตรวจสอบ</th>
+                  </tr>
+                </thead>
+                <tbody id="rep-incidents-body">
+                  <tr>
+                    <td>2026-09-28 11:20:00</td>
+                    <td><span class="status-badge warning">ระดับน้ำลดลงแตะ 68.5%</span></td>
+                    <td>68.5%</td>
+                    <td>แจ้งเตือนระดับน้ำต่ำกว่าเกณฑ์ - ระบบบันทึกและแจ้งเตือนผู้ดูแลเรียบร้อย</td>
+                  </tr>
+                  <tr>
+                    <td>2026-09-28 13:10:00</td>
+                    <td><span class="status-badge warning">อุณหภูมิน้ำขึ้นแตะ 32.3°C</span></td>
+                    <td>32.3°C</td>
+                    <td>แจ้งเตือนอุณหภูมิน้ำสูง - สภาพแวดล้อมระบายความร้อนกลับสู่ 28.5°C ปกติ</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+        </div>
+
+      </section>
+
+      <!-- ====================================================================
+           10. VIEW: DEVICE MANAGEMENT
+           ==================================================================== -->
+      <section id="view-device" class="dashboard-section" style="display:none">
+        
+        <div class="dashboard-header-bar">
+          <div class="header-title-box">
+            <h2><i class="fa-solid fa-server" style="color:var(--primary)"></i> ข้อมูลอุปกรณ์และสถานะฮาร์ดแวร์ (Device Management)</h2>
+            <p>โปรไฟล์บอร์ด ESP32, Uptime, ตารางการจับคู่ GPIO Pin กับเซนเซอร์ และระบบตรวจวินิจฉัย</p>
+          </div>
+          <div class="header-actions">
+            <button class="btn btn-outline btn-sm" onclick="runDiagnostics()">
+              <i class="fa-solid fa-stethoscope"></i> ทดสอบการเชื่อมต่อ (Ping Test)
+            </button>
+          </div>
+        </div>
+
+        <!-- Hardware Profile Card -->
+        <div class="card" style="margin-bottom:1.5rem">
+          <div class="card-header">
+            <div class="card-title">
+              <i class="fa-solid fa-microchip" style="color:var(--primary)"></i> ข้อมูลทางเทคนิคบอร์ด ESP32 (Hardware Profile)
+            </div>
+            <span class="status-badge normal"><span class="pulse-dot online"></span> Online</span>
+          </div>
+          <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:1.25rem">
+            <div>
+              <span style="font-size:0.75rem; color:var(--text-muted)">Microcontroller Unit</span>
+              <div style="font-weight:700; font-size:1rem; margin-top:0.2rem">ESP32-WROOM-32D</div>
+              <span style="font-size:0.75rem; color:var(--text-muted)">Dual-Core Tensilica LX6 240MHz</span>
+            </div>
+            <div>
+              <span style="font-size:0.75rem; color:var(--text-muted)">Firmware Version</span>
+              <div style="font-weight:700; font-size:1rem; margin-top:0.2rem">v3.0.1-prod (ESP-IDF 5.1)</div>
+              <span style="font-size:0.75rem; color:var(--text-muted)">Build: 2026-09-28 Stable</span>
+            </div>
+            <div>
+              <span style="font-size:0.75rem; color:var(--text-muted)">ระยะเวลาทำงานต่อเนื่อง (Uptime)</span>
+              <div style="font-weight:700; font-size:1rem; margin-top:0.2rem" id="dev-uptime">14 วัน 6 ชม. 32 นาที</div>
+              <span style="font-size:0.75rem; color:var(--color-normal)">Zero Crash / Watchdog OK</span>
+            </div>
+            <div>
+              <span style="font-size:0.75rem; color:var(--text-muted)">MAC Address & IP</span>
+              <div style="font-weight:700; font-size:1rem; margin-top:0.2rem" id="dev-mac">24:6F:28:7A:B1:0C</div>
+              <span style="font-size:0.75rem; color:var(--text-muted)" id="dev-ip">IP: 192.168.1.145</span>
+            </div>
+            <div>
+              <span style="font-size:0.75rem; color:var(--text-muted)">หน่วยความจำ Free Heap</span>
+              <div style="font-weight:700; font-size:1rem; margin-top:0.2rem">184 KB / 320 KB (57.5%)</div>
+              <span style="font-size:0.75rem; color:var(--text-muted)">Flash: 4 MB SPI Flash</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Pin & Sensor Mapping Table -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">
+              <i class="fa-solid fa-diagram-project" style="color:var(--color-info)"></i> ตารางจับคู่พอร์ตเชื่อมต่อ (Pin & Sensor Mapping Table)
+            </div>
+            <span style="font-size:0.75rem; color:var(--text-muted)">Schematic V3.0</span>
+          </div>
+          <div class="table-container" style="box-shadow:none; border:none">
+            <table class="custom-table">
+              <thead>
+                <tr>
+                  <th>GPIO Pin</th>
+                  <th>โหมดพอร์ต</th>
+                  <th>อุปกรณ์ / เซนเซอร์ที่เชื่อมต่อ</th>
+                  <th>โปรโตคอล / รูปแบบสัญญาณ</th>
+                  <th>สถานะการทำงาน</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><strong>GPIO 4</strong></td>
+                  <td>Digital In/Out</td>
+                  <td>DS18B20 เซนเซอร์อุณหภูมิน้ำกันน้ำ</td>
+                  <td>1-Wire Protocol (4.7kΩ Pull-up)</td>
+                  <td><span class="status-badge normal"><span class="pulse-dot online"></span> Active / Normal</span></td>
+                </tr>
+                <tr>
+                  <td><strong>GPIO 34</strong></td>
+                  <td>Analog Input (ADC1_CH6)</td>
+                  <td>pH-4502C เซนเซอร์วัดกรด-ด่าง</td>
+                  <td>Analog Voltage (0-3.3V)</td>
+                  <td><span class="status-badge normal"><span class="pulse-dot online"></span> Calibrated / Normal</span></td>
+                </tr>
+                <tr>
+                  <td><strong>GPIO 5 / 18</strong></td>
+                  <td>Digital Out / In</td>
+                  <td>JSN-SR04T อัลตราโซนิกวัดระดับน้ำ</td>
+                  <td>Pulse Width (Trig: 5, Echo: 18)</td>
+                  <td><span class="status-badge normal"><span class="pulse-dot online"></span> Active / Normal</span></td>
+                </tr>
+                <tr>
+                  <td><strong>GPIO 21 / 22</strong></td>
+                  <td>I2C Bus (SDA/SCL)</td>
+                  <td>BH1750 เซนเซอร์ความเข้มแสง</td>
+                  <td>I2C Address: 0x23 (Fast Mode)</td>
+                  <td><span class="status-badge normal"><span class="pulse-dot online"></span> Active / Normal</span></td>
+                </tr>
+                <tr>
+                  <td><strong>GPIO 2</strong></td>
+                  <td>Digital Output</td>
+                  <td>Onboard Status LED Indicator</td>
+                  <td>Heartbeat Blinking (1 Hz)</td>
+                  <td><span class="status-badge normal">Heartbeat Active</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </section>
+
+      <!-- ====================================================================
+           11. VIEW: SETTINGS
+           ==================================================================== -->
+      <section id="view-settings" class="dashboard-section" style="display:none">
+        
+        <div class="dashboard-header-bar">
+          <div class="header-title-box">
+            <h2><i class="fa-solid fa-gear" style="color:var(--text-secondary)"></i> การตั้งค่าระบบและเกณฑ์เซนเซอร์ (System Settings)</h2>
+            <p>ปรับแต่งค่าเกณฑ์ปกติ (Thresholds) ของเซนเซอร์ และกำหนดค่าการเชื่อมต่อ ESP32</p>
+          </div>
+          <div class="header-actions">
+            <button class="btn btn-outline" onclick="resetSettingsDefaults()">
+              <i class="fa-solid fa-rotate-left"></i> คืนค่าเริ่มต้น (Defaults)
+            </button>
+            <button class="btn btn-primary" onclick="saveSystemSettings()">
+              <i class="fa-solid fa-floppy-disk"></i> บันทึกการเปลี่ยนแปลง (Save)
+            </button>
+          </div>
+        </div>
+
+        <form id="settings-form" onsubmit="event.preventDefault(); saveSystemSettings();">
+          
+          <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(320px, 1fr)); gap:1.5rem">
+            
+            <!-- Sensor Threshold Config Form -->
+            <div class="card">
+              <div class="card-header">
+                <div class="card-title">
+                  <i class="fa-solid fa-sliders" style="color:var(--primary)"></i> กำหนดเกณฑ์ปกติของเซนเซอร์ (Sensor Threshold Ranges)
+                </div>
+              </div>
+              <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:1rem">
+                * เมื่อบันทึกแล้ว ระบบจะนำเกณฑ์ใหม่ไปคำนวณการแจ้งเตือน (Alerts) และแดชบอร์ดทันที
+              </p>
+
+              <!-- Temp Threshold -->
+              <div style="margin-bottom:1rem">
+                <label style="font-size:0.85rem; font-weight:600; display:block; margin-bottom:0.35rem">
+                  <i class="fa-solid fa-temperature-half" style="color:#ef4444"></i> อุณหภูมิน้ำ (°C)
+                </label>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.75rem">
+                  <div>
+                    <span style="font-size:0.75rem; color:var(--text-muted)">ต่ำสุด (Min °C):</span>
+                    <input type="number" step="0.5" id="cfg-temp-min" class="form-input" style="width:100%" required>
+                  </div>
+                  <div>
+                    <span style="font-size:0.75rem; color:var(--text-muted)">สูงสุด (Max °C):</span>
+                    <input type="number" step="0.5" id="cfg-temp-max" class="form-input" style="width:100%" required>
+                  </div>
+                </div>
+              </div>
+
+              <!-- pH Threshold -->
+              <div style="margin-bottom:1rem">
+                <label style="font-size:0.85rem; font-weight:600; display:block; margin-bottom:0.35rem">
+                  <i class="fa-solid fa-flask-vial" style="color:#6366f1"></i> ค่าความเป็นกรด-ด่าง (pH)
+                </label>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.75rem">
+                  <div>
+                    <span style="font-size:0.75rem; color:var(--text-muted)">ต่ำสุด (Min pH):</span>
+                    <input type="number" step="0.1" id="cfg-ph-min" class="form-input" style="width:100%" required>
+                  </div>
+                  <div>
+                    <span style="font-size:0.75rem; color:var(--text-muted)">สูงสุด (Max pH):</span>
+                    <input type="number" step="0.1" id="cfg-ph-max" class="form-input" style="width:100%" required>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Water Level Threshold -->
+              <div style="margin-bottom:1rem">
+                <label style="font-size:0.85rem; font-weight:600; display:block; margin-bottom:0.35rem">
+                  <i class="fa-solid fa-droplet" style="color:#2563eb"></i> ระดับน้ำในบ่อเพาะ (%)
+                </label>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.75rem">
+                  <div>
+                    <span style="font-size:0.75rem; color:var(--text-muted)">ต่ำสุด (Min %):</span>
+                    <input type="number" step="1" id="cfg-water-min" class="form-input" style="width:100%" required>
+                  </div>
+                  <div>
+                    <span style="font-size:0.75rem; color:var(--text-muted)">สูงสุด (Max %):</span>
+                    <input type="number" step="1" id="cfg-water-max" class="form-input" style="width:100%" required>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Light Threshold -->
+              <div>
+                <label style="font-size:0.85rem; font-weight:600; display:block; margin-bottom:0.35rem">
+                  <i class="fa-solid fa-sun" style="color:#d97706"></i> ความเข้มแสง (%)
+                </label>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.75rem">
+                  <div>
+                    <span style="font-size:0.75rem; color:var(--text-muted)">ต่ำสุด (Min %):</span>
+                    <input type="number" step="1" id="cfg-light-min" class="form-input" style="width:100%" required>
+                  </div>
+                  <div>
+                    <span style="font-size:0.75rem; color:var(--text-muted)">สูงสุด (Max %):</span>
+                    <input type="number" step="1" id="cfg-light-max" class="form-input" style="width:100%" required>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+
+            <!-- Device Connection Settings -->
+            <div class="card">
+              <div class="card-header">
+                <div class="card-title">
+                  <i class="fa-solid fa-tower-broadcast" style="color:var(--color-info)"></i> การตั้งค่าอุปกรณ์และ Supabase (Device & Cloud Config)
+                </div>
+                <span class="status-badge" id="cfg-supabase-status-badge" style="background:#f1f5f9; color:#64748b">ไม่ได้เชื่อมต่อ</span>
+              </div>
+
+              <div style="margin-bottom:1rem">
+                <label style="font-size:0.85rem; font-weight:600; display:block; margin-bottom:0.35rem">รหัสประจำเครื่อง (Device ID)</label>
+                <input type="text" id="cfg-device-id" class="form-input" style="width:100%" value="ESP32-WOLFFIA-01" required>
+              </div>
+
+              <div style="margin-bottom:1rem">
+                <label style="font-size:0.85rem; font-weight:600; display:block; margin-bottom:0.35rem">ความถี่ในการอัปเดตข้อมูล (Interval Time)</label>
+                <select id="cfg-interval" class="form-select" style="width:100%">
+                  <option value="2000">2 วินาที (Fast Update)</option>
+                  <option value="2500" selected>2.5 วินาที (Recommended)</option>
+                  <option value="5000">5 วินาที (Standard)</option>
+                  <option value="10000">10 วินาที (Power Saving)</option>
+                </select>
+              </div>
+
+              <div style="margin-bottom:1rem">
+                <label style="font-size:0.85rem; font-weight:600; display:block; margin-bottom:0.35rem">Supabase Project URL</label>
+                <input type="url" id="cfg-supabase-url" class="form-input" style="width:100%" placeholder="https://your-project.supabase.co">
+              </div>
+
+              <div style="margin-bottom:1rem">
+                <label style="font-size:0.85rem; font-weight:600; display:block; margin-bottom:0.35rem">Supabase Anon Key</label>
+                <input type="password" id="cfg-supabase-key" class="form-input" style="width:100%" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...">
+              </div>
+
+              <div style="margin-bottom:1.25rem">
+                <label style="font-size:0.85rem; font-weight:600; display:block; margin-bottom:0.35rem">ชื่อตาราง Supabase (Table Name)</label>
+                <input type="text" id="cfg-supabase-table" class="form-input" style="width:100%" value="wolffia_telemetry" required>
+              </div>
+
+              <!-- Action Buttons for Supabase Testing -->
+              <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.75rem; margin-bottom:1.25rem">
+                <button type="button" class="btn btn-outline" id="btn-test-supabase" onclick="testSupabaseConnection()" style="justify-content:center">
+                  <i class="fa-solid fa-plug-circle-bolt"></i> ทดสอบเชื่อมต่อ
+                </button>
+                <button type="button" class="btn btn-outline" id="btn-sample-telemetry" onclick="sendSampleTelemetryToSupabase()" style="justify-content:center">
+                  <i class="fa-solid fa-cloud-arrow-up"></i> ส่งข้อมูลจำลอง
+                </button>
+              </div>
+
+              <!-- SQL Schema Snippet Box -->
+              <div style="background:var(--bg-surface-subtle); border:1px solid var(--border-color); border-radius:var(--radius-md); padding:0.85rem 1rem; margin-bottom:1.25rem">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem">
+                  <span style="font-weight:600; font-size:0.82rem; color:var(--text-main)"><i class="fa-solid fa-database" style="color:var(--color-info)"></i> สคริปต์ SQL สำหรับสร้างตาราง</span>
+                  <button type="button" class="btn btn-outline btn-sm" onclick="copySupabaseSqlScript()" style="padding:0.2rem 0.6rem; font-size:0.75rem">
+                    <i class="fa-solid fa-copy"></i> คัดลอก SQL
+                  </button>
+                </div>
+                <p style="font-size:0.75rem; color:var(--text-muted); margin:0; line-height:1.4">
+                  นำไปรันใน <strong>Supabase SQL Editor</strong> เพื่อสร้างตาราง <code>wolffia_telemetry</code> พร้อมเปิด Realtime และ RLS Policy ได้ทันที
+                </p>
+              </div>
+
+              <button type="submit" class="btn btn-primary" style="width:100%; justify-content:center">
+                <i class="fa-solid fa-floppy-disk"></i> บันทึกการตั้งค่าทั้งหมด
+              </button>
+            </div>
+
+          </div>
+
+        </form>
+
+      </section>
+
+    </main>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div class="toast-container" id="toast-container"></div>
+
+  <!-- Scripts -->
+  <script src="db-config.js"></script>
+  <script src="data-engine.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
