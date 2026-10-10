@@ -1076,10 +1076,12 @@ CREATE TABLE IF NOT EXISTS public.wolffia_telemetry (
 -- 1. Enable Realtime Stream
 ALTER PUBLICATION supabase_realtime ADD TABLE public.wolffia_telemetry;
 
--- 2. Enable Row Level Security (RLS) & Public Policies
-ALTER TABLE public.wolffia_telemetry ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Allow public read" ON public.wolffia_telemetry FOR SELECT USING (true);
-CREATE POLICY "Allow public insert" ON public.wolffia_telemetry FOR INSERT WITH CHECK (true);`;
+-- 2. Grant permissions for ESP32 and Web App
+GRANT ALL ON TABLE public.wolffia_telemetry TO anon, authenticated, service_role;
+GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO anon, authenticated, service_role;
+
+-- 3. Unlock RLS for IoT Telemetry table
+ALTER TABLE public.wolffia_telemetry DISABLE ROW LEVEL SECURITY;`;
 
     if (navigator.clipboard && navigator.clipboard.writeText) {
       navigator.clipboard.writeText(sql).then(() => {

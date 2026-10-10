@@ -23,25 +23,23 @@ ON public.wolffia_telemetry (created_at DESC);
 -- 3. เปิดใช้งาน Supabase Realtime (WebSocket Streaming ไปยัง Dashboard)
 ALTER PUBLICATION supabase_realtime ADD TABLE public.wolffia_telemetry;
 
--- 4. ตั้งค่าสิทธิ์ความปลอดภัย Row Level Security (RLS) สำหรับ Web App & ESP32
-ALTER TABLE public.wolffia_telemetry ENABLE ROW LEVEL SECURITY;
+-- 4. มอบสิทธิ์การอ่านและบันทึกข้อมูล (SELECT / INSERT) ให้ ESP32 และ Web Dashboard
+GRANT ALL ON TABLE public.wolffia_telemetry TO anon, authenticated, service_role;
+GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO anon, authenticated, service_role;
 
--- อนุญาตให้อ่านข้อมูลเซนเซอร์ (SELECT) แบบ Public
-DROP POLICY IF EXISTS "Allow public read" ON public.wolffia_telemetry;
-CREATE POLICY "Allow public read" 
-ON public.wolffia_telemetry 
-FOR SELECT 
-USING (true);
+-- 5. ปลดล็อก Row Level Security (RLS) สำหรับตาราง IoT Telemetry 
+-- (วิธีที่เสถียรที่สุดสำหรับ IoT: ปิด RLS เพื่อให้บอร์ด ESP32 ยิงส่งข้อมูลได้ 100% ไม่ติดบล็อก)
+ALTER TABLE public.wolffia_telemetry DISABLE ROW LEVEL SECURITY;
 
--- อนุญาตให้เพิ่มข้อมูลเซนเซอร์ (INSERT) จาก ESP32 หรือ Web Dashboard
-DROP POLICY IF EXISTS "Allow public insert" ON public.wolffia_telemetry;
-CREATE POLICY "Allow public insert" 
-ON public.wolffia_telemetry 
-FOR INSERT 
-WITH CHECK (true);
+-- *หมายเหตุ: หากต้องการเปิด RLS ไว้ ให้ใช้นโยบายด้านล่างนี้แทน:
+-- ALTER TABLE public.wolffia_telemetry ENABLE ROW LEVEL SECURITY;
+-- DROP POLICY IF EXISTS "Allow public read" ON public.wolffia_telemetry;
+-- CREATE POLICY "Allow public read" ON public.wolffia_telemetry FOR SELECT TO public USING (true);
+-- DROP POLICY IF EXISTS "Allow public insert" ON public.wolffia_telemetry;
+-- CREATE POLICY "Allow public insert" ON public.wolffia_telemetry FOR INSERT TO public WITH CHECK (true);
 
 -- ==============================================================================
--- ตัวอย่างข้อมูลทดสอบ (Sample Initial Records)
+-- 6. เพิ่มข้อมูลตัวอย่างเริ่มต้น (Sample Initial Records)
 -- ==============================================================================
 INSERT INTO public.wolffia_telemetry (temperature, ph, water_level, light, rssi, device_status)
 VALUES 
