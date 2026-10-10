@@ -315,7 +315,7 @@
           bSub.textContent = `อุปกรณ์: ${c.deviceId} • WiFi: ${engine.device.wifiSsid} (${c.rssi} dBm) • ปั๊ม: ${c.pumpStatus ? 'ON' : 'OFF'} • โหมด: ${c.systemMode || 'AUTO'} • อัปเดตสดจาก Arduino`;
           if (bLast) bLast.textContent = `${new Date(c.timestamp).toLocaleTimeString('th-TH')}`;
           if (btnUsb) {
-            btnUsb.innerHTML = '<i class="fa-solid fa-microchip"></i> สลับต่อสาย USB';
+            btnUsb.innerHTML = '<i class="fa-brands fa-usb"></i> ต่อบอร์ด USB';
             btnUsb.className = 'btn btn-outline btn-sm';
           }
         } else {
@@ -328,8 +328,35 @@
           bSub.innerHTML = `บอร์ดยังไม่ส่งข้อมูลใหม่: <strong>1. เสียบสาย USB แล้วกดปุ่ม 'ต่อบอร์ด USB'</strong> (ปิด Serial Monitor ใน Arduino ก่อน) หรือ <strong>2. ตรวจสอบชื่อ WiFi/Password ใน Arduino IDE</strong>`;
           if (bLast) bLast.textContent = c.timestamp ? `ล่าสุดเมื่อ: ${new Date(c.timestamp).toLocaleTimeString('th-TH')}` : '';
           if (btnUsb) {
-            btnUsb.innerHTML = '<i class="fa-solid fa-bolt"></i> กดเพื่อต่อบอร์ด USB เดี๋ยวนี้';
+            btnUsb.innerHTML = '<i class="fa-brands fa-usb"></i> กดเพื่อต่อบอร์ด USB เดี๋ยวนี้';
             btnUsb.className = 'btn btn-primary btn-sm';
+          }
+        }
+
+        // Keep Hero Card button synced
+        const btnHero = document.getElementById('btn-hero-usb');
+        const badgeHero = document.getElementById('usb-badge-status');
+        if (btnHero) {
+          if (isUsbActive) {
+            btnHero.innerHTML = '<i class="fa-solid fa-link-slash"></i> ตัดการเชื่อมต่อ USB';
+            btnHero.style.background = '#fee2e2';
+            btnHero.style.borderColor = '#fca5a5';
+            btnHero.style.color = '#dc2626';
+            if (badgeHero) {
+              badgeHero.textContent = '🟢 เชื่อมต่อสดแล้ว (115200 Baud)';
+              badgeHero.style.background = '#dcfce7';
+              badgeHero.style.color = '#15803d';
+            }
+          } else {
+            btnHero.innerHTML = '<i class="fa-brands fa-usb"></i> ต่อบอร์ด USB เดี๋ยวนี้';
+            btnHero.style.background = '#16a34a';
+            btnHero.style.borderColor = '#15803d';
+            btnHero.style.color = '#ffffff';
+            if (badgeHero) {
+              badgeHero.textContent = isCloudActive ? 'รับข้อมูลผ่าน WiFi' : 'พร้อมเชื่อมต่อ';
+              badgeHero.style.background = isCloudActive ? '#dcfce7' : '#e0f2fe';
+              badgeHero.style.color = isCloudActive ? '#15803d' : '#0369a1';
+            }
           }
         }
       } else {
@@ -1568,22 +1595,87 @@ GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO anon, authenticated, se
   };
 
   function updateUsbButtonUI(connected) {
-    const btn = document.getElementById('btn-connect-usb');
-    const icon = document.getElementById('usb-status-icon');
-    const text = document.getElementById('usb-status-text');
-    if (!btn) return;
-    if (connected) {
-      btn.style.background = '#dcfce7';
-      btn.style.borderColor = '#86efac';
-      btn.style.color = '#15803d';
-      if (icon) icon.className = 'fa-solid fa-link';
-      if (text) text.textContent = 'USB: เชื่อมต่อแล้ว';
-    } else {
-      btn.style.background = '';
-      btn.style.borderColor = '';
-      btn.style.color = '';
-      if (icon) icon.className = 'fa-solid fa-microchip';
-      if (text) text.textContent = 'ต่อบอร์ด USB';
+    window.isUsbConnected = Boolean(connected);
+
+    // 1. Top Navbar Button
+    const btnNav = document.getElementById('btn-connect-usb');
+    const iconNav = document.getElementById('usb-status-icon');
+    const textNav = document.getElementById('usb-status-text');
+    if (btnNav) {
+      if (connected) {
+        btnNav.style.background = '#fee2e2';
+        btnNav.style.borderColor = '#fca5a5';
+        btnNav.style.color = '#dc2626';
+        if (iconNav) iconNav.className = 'fa-solid fa-link-slash';
+        if (textNav) textNav.textContent = 'ตัดการเชื่อมต่อ USB';
+      } else {
+        btnNav.style.background = '#16a34a';
+        btnNav.style.borderColor = '#15803d';
+        btnNav.style.color = '#ffffff';
+        if (iconNav) iconNav.className = 'fa-brands fa-usb';
+        if (textNav) textNav.textContent = '🔌 ต่อบอร์ด USB';
+      }
+    }
+
+    // 2. Main Dashboard Hero Quick Connect Card
+    const btnHero = document.getElementById('btn-hero-usb');
+    const textHero = document.getElementById('btn-hero-usb-text');
+    const badgeHero = document.getElementById('usb-badge-status');
+    if (btnHero) {
+      if (connected) {
+        btnHero.style.background = '#fee2e2';
+        btnHero.style.borderColor = '#fca5a5';
+        btnHero.style.color = '#dc2626';
+        btnHero.innerHTML = '<i class="fa-solid fa-link-slash"></i> ตัดการเชื่อมต่อ USB';
+        if (badgeHero) {
+          badgeHero.textContent = '🟢 เชื่อมต่อสดแล้ว (115200 Baud)';
+          badgeHero.style.background = '#dcfce7';
+          badgeHero.style.color = '#15803d';
+        }
+      } else {
+        btnHero.style.background = '#16a34a';
+        btnHero.style.borderColor = '#15803d';
+        btnHero.style.color = '#ffffff';
+        btnHero.innerHTML = '<i class="fa-brands fa-usb"></i> ต่อบอร์ด USB เดี๋ยวนี้';
+        if (badgeHero) {
+          badgeHero.textContent = 'พร้อมเชื่อมต่อ';
+          badgeHero.style.background = '#e0f2fe';
+          badgeHero.style.color = '#0369a1';
+        }
+      }
+    }
+
+    // 3. Live Status Banner Button
+    const btnBanner = document.getElementById('btn-banner-usb');
+    if (btnBanner) {
+      if (connected) {
+        btnBanner.innerHTML = '<i class="fa-solid fa-link-slash"></i> ตัดการเชื่อมต่อ USB';
+        btnBanner.className = 'btn btn-outline btn-sm';
+        btnBanner.style.color = '#dc2626';
+        btnBanner.style.borderColor = '#fca5a5';
+      } else {
+        btnBanner.innerHTML = '<i class="fa-brands fa-usb"></i> ต่อบอร์ด USB';
+        btnBanner.className = 'btn btn-primary btn-sm';
+        btnBanner.style.color = '#ffffff';
+        btnBanner.style.borderColor = '#15803d';
+        btnBanner.style.background = '#16a34a';
+      }
+    }
+
+    // 4. Sidebar Device Widget Button
+    const btnSidebar = document.getElementById('btn-sidebar-usb');
+    if (btnSidebar) {
+      if (connected) {
+        btnSidebar.style.background = '#fee2e2';
+        btnSidebar.style.borderColor = '#fca5a5';
+        btnSidebar.style.color = '#dc2626';
+        btnSidebar.innerHTML = '<i class="fa-solid fa-link-slash"></i> ตัดการเชื่อมต่อ USB';
+      } else {
+        btnSidebar.style.background = '#16a34a';
+        btnSidebar.style.borderColor = '#15803d';
+        btnSidebar.style.color = '#ffffff';
+        btnSidebar.innerHTML = '<i class="fa-brands fa-usb"></i> ต่อบอร์ด USB';
+      }
     }
   }
 
