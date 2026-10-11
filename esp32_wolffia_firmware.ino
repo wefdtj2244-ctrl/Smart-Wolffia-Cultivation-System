@@ -11,8 +11,8 @@
 // =====================================================
 // 1. WIFI & SUPABASE CONFIGURATION
 // =====================================================
-const char* WIFI_SSID = "Home 96_2.4G";
-const char* WIFI_PASSWORD = "0844688342";
+const char* WIFI_SSID = "OPPO A79 5G";
+const char* WIFI_PASSWORD = "0654318500";
 const char* SUPABASE_URL =
 "https://dtersefrvlbyocwozdab.supabase.co";
 // ใช้ Publishable key เท่านั้น
@@ -91,15 +91,11 @@ return value ? "true" : "false";
 String currentSystemStatus() {
 if (emergencyStop) return "EMERGENCY_STOP";
 if (WiFi.status() != WL_CONNECTED) return "WIFI_DISCONNECTED";
-if (!waterSensorOK) return "WATER_SENSOR_ERROR";
 if (!tempSensorOK || !lightSensorOK) return "SENSOR_WARNING";
 return "NORMAL";
 }
 bool pumpSafetyOK() {
-return !emergencyStop &&
-waterSensorOK &&
-isfinite(waterPercent) &&
-waterPercent > WATER_MIN_FOR_PUMP;
+return !emergencyStop;
 }
 void setPump(bool on) {
 if (on && !pumpSafetyOK()) {
