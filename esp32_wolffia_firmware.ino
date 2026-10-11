@@ -1,4 +1,4 @@
-﻿#include <WiFi.h>
+#include <WiFi.h>
 #include <WebServer.h>
 #include <HTTPClient.h>
 #include <WiFiClientSecure.h>
@@ -45,7 +45,7 @@ const unsigned long PUMP_ON_MS = 120000UL;
 const unsigned long PUMP_OFF_MS = 180000UL;
 // รอบการทำงาน
 const unsigned long SENSOR_INTERVAL_MS = 5000UL;
-const unsigned long SUPABASE_INTERVAL_MS = 60000UL;
+const unsigned long SUPABASE_INTERVAL_MS = 5000UL; // ซิงค์ส่งขึ้น Supabase ทุก 5 วินาที พร้อม Serial Monitor
 const unsigned long WIFI_CONNECT_TIMEOUT_MS = 20000UL;
 const unsigned long WIFI_RETRY_DELAY_MS = 5000UL;
 // =====================================================

@@ -249,7 +249,7 @@
     restartTimer() {
       if (this.timer) clearInterval(this.timer);
 
-      const interval = Math.max(1500, this.device.interval || 2500);
+      const interval = (this.mode === 'LIVE') ? 2000 : Math.max(1500, this.device.interval || 2500);
 
       this.timer = setInterval(() => {
         if (this.mode === 'DEMO') {
@@ -405,25 +405,27 @@
         this.liveSubscription = this.supabaseClient
           .channel('wolffia_realtime_stream')
           .on('postgres_changes', {
-            event: 'INSERT',
+            event: '*',
             schema: 'public',
             table: 'sensor_readings'
           }, (payload) => {
-            console.log('[Supabase Realtime sensor_readings] New row:', payload);
-            if (payload && payload.new) {
-              this.handleIncomingTelemetryRow(payload.new);
-              this.logActivity(`[Supabase Live] บอร์ด ${payload.new.device_id || 'ESP32'} ส่งข้อมูลใหม่ (sensor_readings)`, 'cloud');
+            console.log('[Supabase Realtime sensor_readings] Payload:', payload);
+            if (payload && (payload.new || payload.record)) {
+              const row = payload.new || payload.record;
+              this.handleIncomingTelemetryRow(row);
+              this.logActivity(`[Supabase Live] บอร์ด ${row.device_id || 'ESP32'} ส่งข้อมูลใหม่ (sensor_readings)`, 'cloud');
             }
           })
           .on('postgres_changes', {
-            event: 'INSERT',
+            event: '*',
             schema: 'public',
             table: 'wolffia_telemetry'
           }, (payload) => {
-            console.log('[Supabase Realtime wolffia_telemetry] New row:', payload);
-            if (payload && payload.new) {
-              this.handleIncomingTelemetryRow(payload.new);
-              this.logActivity(`[Supabase Live] บอร์ด ${payload.new.device_id || 'ESP32'} ส่งข้อมูลใหม่ (wolffia_telemetry)`, 'cloud');
+            console.log('[Supabase Realtime wolffia_telemetry] Payload:', payload);
+            if (payload && (payload.new || payload.record)) {
+              const row = payload.new || payload.record;
+              this.handleIncomingTelemetryRow(row);
+              this.logActivity(`[Supabase Live] บอร์ด ${row.device_id || 'ESP32'} ส่งข้อมูลใหม่ (wolffia_telemetry)`, 'cloud');
             }
           })
           .subscribe((status) => {

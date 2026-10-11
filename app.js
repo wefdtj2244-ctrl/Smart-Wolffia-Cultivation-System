@@ -1267,7 +1267,11 @@ BEGIN
   END IF;
 END $$;
 
--- 4. Disable RLS to allow direct IoT posting from ESP32 (Prevents 401 Unauthorized)
+-- 4. Enable Full Realtime Replication Identity
+ALTER TABLE public.sensor_readings REPLICA IDENTITY FULL;
+ALTER TABLE public.wolffia_telemetry REPLICA IDENTITY FULL;
+
+-- 5. Disable RLS to allow direct IoT posting from ESP32 (Prevents 401 Unauthorized)
 ALTER TABLE public.sensor_readings DISABLE ROW LEVEL SECURITY;
 ALTER TABLE public.wolffia_telemetry DISABLE ROW LEVEL SECURITY;
 
