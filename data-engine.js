@@ -611,7 +611,14 @@
             this.lastProcessedRowTime = latest.created_at;
             this.handleIncomingTelemetryRow(latest);
           } else {
-            // Keep real values intact without jitter
+            // Keep real hardware values intact (no fake jitter), but advance time series every 4.5s so live charts scroll continuously
+            const now = Date.now();
+            if (this.isLiveFresh && (!this.lastLiveHistoryTick || (now - this.lastLiveHistoryTick >= 4500))) {
+              this.lastLiveHistoryTick = now;
+              this.current.timestamp = new Date().toISOString();
+              this.history.push(Object.assign({}, this.current));
+              if (this.history.length > 300) this.history.shift();
+            }
             this.notifyListeners();
           }
         } else {

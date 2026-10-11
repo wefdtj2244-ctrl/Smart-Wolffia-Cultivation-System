@@ -345,7 +345,10 @@
           if (bDot) bDot.className = 'pulse-dot online';
           bTitle.innerHTML = `<span style="color:#166534">🟢 รับข้อมูลสดจากบอร์ด ESP32 ผ่าน WiFi (Supabase Cloud) เรียลไทม์</span>`;
           bSub.textContent = `อุปกรณ์: ${c.deviceId} • WiFi: ${engine.device.wifiSsid} (${c.rssi} dBm) • ปั๊ม: ${c.pumpStatus ? 'ON' : 'OFF'} • โหมด: ${c.systemMode || 'AUTO'} • อัปเดตสดจาก Arduino`;
-          if (bLast) bLast.textContent = `${new Date(c.timestamp).toLocaleTimeString('th-TH')}`;
+          if (bLast) {
+            const ageSec = Math.max(0, Math.floor((Date.now() - new Date(c.timestamp).getTime()) / 1000));
+            bLast.innerHTML = `${new Date(c.timestamp).toLocaleTimeString('th-TH')} <span style="font-size:0.72rem; opacity:0.85; font-weight:normal">(${ageSec} วิที่แล้ว)</span>`;
+          }
           if (btnUsb) {
             btnUsb.innerHTML = '<i class="fa-brands fa-usb"></i> ต่อบอร์ด USB';
             btnUsb.className = 'btn btn-outline btn-sm';
