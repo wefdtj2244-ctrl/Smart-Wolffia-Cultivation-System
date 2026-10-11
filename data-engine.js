@@ -444,40 +444,39 @@
       if (!row) return;
       const prev = Object.assign({}, this.current);
 
-      // 1. Temperature: handle DS18B20 disconnect sentinel (-999 or out-of-range)
-      let rawTemp = row.temperature !== undefined ? parseFloat(row.temperature) : (row.temp !== undefined ? parseFloat(row.temp) : NaN);
-      let newTemp = prev.temperature;
+      // 1. Temperature: handle DS18B20 disconnect sentinel (-999.0, null, or out-of-range)
+      let rawTemp = (row.temperature !== undefined && row.temperature !== null) ? parseFloat(row.temperature) 
+                  : ((row.temp !== undefined && row.temp !== null) ? parseFloat(row.temp) : NaN);
+      let newTemp = rawTemp;
       let tempValid = true;
-      if (!isNaN(rawTemp) && isFinite(rawTemp)) {
-        if (rawTemp === -999.0 || rawTemp < -40 || rawTemp > 125) {
-          tempValid = false;
-        } else {
-          newTemp = parseFloat(rawTemp.toFixed(1));
-        }
+      if (isNaN(rawTemp) || !isFinite(rawTemp) || rawTemp === -999.0 || rawTemp < -40 || rawTemp > 125) {
+        tempValid = false;
+        newTemp = (rawTemp === -999.0 || !isNaN(rawTemp)) ? rawTemp : -999.0;
+      } else {
+        newTemp = parseFloat(rawTemp.toFixed(1));
       }
 
-      // 2. pH: handle sensor error sentinel (-1.0 or out-of-range)
-      let rawPh = row.ph !== undefined ? parseFloat(row.ph) : NaN;
-      let newPh = prev.ph;
+      // 2. pH: handle sensor reading (0 - 14)
+      let rawPh = (row.ph !== undefined && row.ph !== null) ? parseFloat(row.ph) : NaN;
+      let newPh = rawPh;
       let phValid = true;
-      if (!isNaN(rawPh) && isFinite(rawPh)) {
-        if (rawPh < 0 || rawPh > 14) {
-          phValid = false;
-        } else {
-          newPh = parseFloat(rawPh.toFixed(2));
-        }
+      if (isNaN(rawPh) || !isFinite(rawPh) || rawPh < 0 || rawPh > 14) {
+        phValid = false;
+        newPh = isNaN(rawPh) ? (prev.ph || 7.0) : rawPh;
+      } else {
+        newPh = parseFloat(rawPh.toFixed(2));
       }
 
-      // 3. Light: handle BH1750 error sentinel (-1.0)
-      let rawLight = row.light !== undefined ? parseFloat(row.light) : (row.lux !== undefined ? parseFloat(row.lux) : NaN);
-      let newLight = prev.light;
+      // 3. Light: handle BH1750 error sentinel (-1.0, null, or out-of-range)
+      let rawLight = (row.light !== undefined && row.light !== null) ? parseFloat(row.light) 
+                   : ((row.lux !== undefined && row.lux !== null) ? parseFloat(row.lux) : NaN);
+      let newLight = rawLight;
       let lightValid = true;
-      if (!isNaN(rawLight) && isFinite(rawLight)) {
-        if (rawLight < 0) {
-          lightValid = false;
-        } else {
-          newLight = parseFloat(rawLight.toFixed(1));
-        }
+      if (isNaN(rawLight) || !isFinite(rawLight) || rawLight < 0) {
+        lightValid = false;
+        newLight = (rawLight === -1.0 || !isNaN(rawLight)) ? rawLight : -1.0;
+      } else {
+        newLight = parseFloat(rawLight.toFixed(1));
       }
 
       // 4. Pump status, Mode, and Safety Status from ESP32 Firmware V6
@@ -496,14 +495,30 @@
       }
 
       // Update Trends
-      const tempDiff = parseFloat((newTemp - prev.temperature).toFixed(1));
-      const phDiff = parseFloat((newPh - prev.ph).toFixed(2));
-      const lightDiff = parseFloat((newLight - prev.light).toFixed(1));
+      const prevT = typeof prev.temperature === 'number' ? prev.temperature : newTemp;
+      const prevP = typeof prev.ph === 'number' ? prev.ph : newPh;
+      const prevL = typeof prev.light === 'number' ? prev.light : newLight;
+
+      const tempDiff = (tempValid && prev.tempValid) ? parseFloat((newTemp - prevT).toFixed(1)) : 0;
+      const phDiff = (phValid && prev.phValid) ? parseFloat((newPh - prevP).toFixed(2)) : 0;
+      const lightDiff = (lightValid && prev.lightValid) ? parseFloat((newLight - prevL).toFixed(1)) : 0;
 
       this.trends = {
-        temp: { diff: tempDiff, direction: tempDiff >= 0 ? 'up' : 'down', text: (tempDiff >= 0 ? '+' : '') + tempDiff + '°C' },
-        ph: { diff: phDiff, direction: phDiff >= 0 ? 'up' : 'down', text: (phDiff >= 0 ? '+' : '') + phDiff },
-        light: { diff: lightDiff, direction: lightDiff >= 0 ? 'up' : 'down', text: (lightDiff >= 0 ? '+' : '') + lightDiff + (newLight > 100 ? ' lx' : '%') }
+        temp: { 
+          diff: tempDiff, 
+          direction: tempDiff > 0 ? 'up' : (tempDiff < 0 ? 'down' : 'flat'), 
+          text: !tempValid ? 'รอเซนเซอร์' : ((tempDiff >= 0 ? '+' : '') + tempDiff + '°C') 
+        },
+        ph: { 
+          diff: phDiff, 
+          direction: phDiff > 0 ? 'up' : (phDiff < 0 ? 'down' : 'flat'), 
+          text: !phValid ? 'รอเซนเซอร์' : ((phDiff >= 0 ? '+' : '') + phDiff) 
+        },
+        light: { 
+          diff: lightDiff, 
+          direction: lightDiff > 0 ? 'up' : (lightDiff < 0 ? 'down' : 'flat'), 
+          text: !lightValid ? 'รอเซนเซอร์' : ((lightDiff >= 0 ? '+' : '') + lightDiff + (newLight > 100 ? ' lx' : '%')) 
+        }
       };
 
       const devId = row.device_id || this.device.deviceId;
@@ -538,52 +553,6 @@
       this.notifyListeners();
     }
 
-    applyLiveHeartbeatDrift() {
-      // Natural sensor electrical noise & microscopic thermal variation around current baseline
-      const tempJitter = (Math.random() - 0.5) * 0.12;
-      const phJitter = (Math.random() - 0.5) * 0.02;
-      const lightJitter = (Math.random() - 0.5) * 0.8;
-
-      let t = (this.current.temperature || 31.45) + tempJitter;
-      let p = (this.current.ph || 7.15) + phJitter;
-      let l = (this.current.light || 72.0) + lightJitter;
-
-      // Bound within realistic cultivation limits
-      t = parseFloat(Math.max(20, Math.min(38, t)).toFixed(1));
-      p = parseFloat(Math.max(4.0, Math.min(10.0, p)).toFixed(2));
-      l = parseFloat(Math.max(0, Math.min(100, l)).toFixed(1));
-
-      this.current.temperature = t;
-      this.current.temp = t;
-      this.current.ph = p;
-      this.current.light = l;
-      this.current.timestamp = new Date().toISOString();
-
-      // Update mini trends
-      const tDiff = parseFloat(tempJitter.toFixed(1));
-      this.trends.temp.diff = tDiff;
-      this.trends.temp.direction = tDiff >= 0 ? 'up' : 'down';
-      this.trends.temp.text = (tDiff >= 0 ? '+' : '') + tDiff + '°C';
-
-      const pDiff = parseFloat(phJitter.toFixed(2));
-      this.trends.ph.diff = pDiff;
-      this.trends.ph.direction = pDiff >= 0 ? 'up' : 'down';
-      this.trends.ph.text = (pDiff >= 0 ? '+' : '') + pDiff;
-
-      const lDiff = parseFloat(lightJitter.toFixed(1));
-      this.trends.light.diff = lDiff;
-      this.trends.light.direction = lDiff >= 0 ? 'up' : 'down';
-      this.trends.light.text = (lDiff >= 0 ? '+' : '') + lDiff + '%';
-
-      // Keep real-time rolling history active for charts
-      this.history.push(Object.assign({}, this.current));
-      if (this.history.length > 300) {
-        this.history.shift();
-      }
-
-      this.evaluateAlerts();
-    }
-
     async tickLiveSync() {
       // If Web Serial USB data arrived recently (within 6 seconds), let USB stream drive the data
       if (this.lastSerialDataTime && (Date.now() - this.lastSerialDataTime < 6000)) {
@@ -596,7 +565,6 @@
 
       if (!this.supabaseClient) {
         this.supabaseStatus = 'Not Configured';
-        this.applyLiveHeartbeatDrift();
         this.notifyListeners();
         return;
       }
@@ -634,27 +602,24 @@
 
         if (latest) {
           this.supabaseStatus = 'Connected';
-          if (latest.id !== this.lastProcessedRowId && latest.created_at !== this.lastProcessedRowTime) {
+          const rowTime = new Date(latest.created_at).getTime();
+          this.isLiveFresh = (Date.now() - rowTime) < 90000;
+          if (latest.id !== this.lastProcessedRowId || latest.created_at !== this.lastProcessedRowTime) {
             this.lastProcessedRowId = latest.id;
             this.lastProcessedRowTime = latest.created_at;
             this.handleIncomingTelemetryRow(latest);
           } else {
-            const rowTime = new Date(latest.created_at).getTime();
-            // ESP32 V6 sends to Supabase every 60s, so consider live fresh if within 90s
-            this.isLiveFresh = (Date.now() - rowTime) < 90000;
-            this.applyLiveHeartbeatDrift();
+            // Keep real values intact without jitter
             this.notifyListeners();
           }
         } else {
           this.supabaseStatus = 'Connected (0 records)';
           this.isLiveFresh = false;
-          this.applyLiveHeartbeatDrift();
           this.notifyListeners();
         }
       } catch (err) {
         console.warn('[Supabase Live] fetch exception:', err);
         this.supabaseStatus = 'Network Error';
-        this.applyLiveHeartbeatDrift();
         this.notifyListeners();
       }
     }
@@ -838,26 +803,37 @@
 
         if (data && data.length > 0) {
           const reversed = data.slice().reverse();
-          const realRows = reversed.map(r => ({
-            timestamp: r.created_at,
-            deviceId: r.device_id || this.device.deviceId,
-            temp: parseFloat(r.temperature !== undefined ? r.temperature : (r.temp !== undefined ? r.temp : 28)),
-            temperature: parseFloat(r.temperature !== undefined ? r.temperature : (r.temp !== undefined ? r.temp : 28)),
-            ph: parseFloat(r.ph || 7.0),
-            light: parseFloat(r.light || 65),
-            pumpStatus: r.pump_status !== undefined ? Boolean(r.pump_status) : false,
-            systemMode: r.system_mode || 'AUTO',
-            systemStatus: r.system_status || 'NORMAL',
-            deviceStatus: r.device_status || 'Online',
-            rssi: r.rssi || -58
-          }));
+          const realRows = reversed.map(r => {
+            const rawT = (r.temperature !== undefined && r.temperature !== null) ? parseFloat(r.temperature) 
+                       : ((r.temp !== undefined && r.temp !== null) ? parseFloat(r.temp) : NaN);
+            const isTValid = !isNaN(rawT) && rawT !== -999.0 && rawT > -40 && rawT < 125;
+            
+            const rawP = (r.ph !== undefined && r.ph !== null) ? parseFloat(r.ph) : NaN;
+            const isPValid = !isNaN(rawP) && rawP >= 0 && rawP <= 14;
 
-          if (realRows.length >= 20) {
-            this.history = realRows;
-          } else {
-            const seed = this.generateHistoricalSeed(40);
-            this.history = [...seed.slice(0, 40 - realRows.length), ...realRows];
-          }
+            const rawL = (r.light !== undefined && r.light !== null) ? parseFloat(r.light) 
+                       : ((r.lux !== undefined && r.lux !== null) ? parseFloat(r.lux) : NaN);
+            const isLValid = !isNaN(rawL) && rawL >= 0;
+
+            return {
+              timestamp: r.created_at,
+              deviceId: r.device_id || this.device.deviceId,
+              temp: isTValid ? parseFloat(rawT.toFixed(1)) : -999.0,
+              temperature: isTValid ? parseFloat(rawT.toFixed(1)) : -999.0,
+              tempValid: isTValid,
+              ph: isPValid ? parseFloat(rawP.toFixed(2)) : 7.0,
+              phValid: isPValid,
+              light: isLValid ? parseFloat(rawL.toFixed(1)) : -1.0,
+              lightValid: isLValid,
+              pumpStatus: r.pump_status !== undefined ? Boolean(r.pump_status) : false,
+              systemMode: r.system_mode || 'AUTO',
+              systemStatus: r.system_status || 'NORMAL',
+              deviceStatus: r.device_status || 'Online',
+              rssi: r.rssi || -58
+            };
+          });
+
+          this.history = realRows;
 
           this.supabaseStatus = 'Connected';
           this.handleIncomingTelemetryRow(data[0]);

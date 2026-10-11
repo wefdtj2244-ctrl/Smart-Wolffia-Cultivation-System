@@ -239,14 +239,32 @@
     const tr = engine.trends;
 
     // Sensor Cards Values
-    setText('dash-temp-val', c.temperature.toFixed(1));
-    setText('dash-ph-val', c.ph.toFixed(2));
-    setText('dash-light-val', c.light.toFixed(1));
+    if (c.tempValid === false || c.temperature === -999 || c.temperature === null) {
+      setText('dash-temp-val', '-999.0');
+      const tempBadge = document.getElementById('dash-temp-status');
+      if (tempBadge) {
+        tempBadge.textContent = 'ตรวจไม่พบเซนเซอร์ (DS18B20)';
+        tempBadge.className = 'status-badge danger';
+      }
+    } else {
+      setText('dash-temp-val', (typeof c.temperature === 'number') ? c.temperature.toFixed(1) : '--');
+      setBadgeStatus('dash-temp-status', c.temperature, th.temp.min, th.temp.max, '°C');
+    }
 
-    // Status Badges
-    setBadgeStatus('dash-temp-status', c.temperature, th.temp.min, th.temp.max, '°C');
+    setText('dash-ph-val', (typeof c.ph === 'number') ? c.ph.toFixed(2) : '--');
     setBadgeStatus('dash-ph-status', c.ph, th.ph.min, th.ph.max, '');
-    setBadgeStatus('dash-light-status', c.light, th.light.min, th.light.max, '%');
+
+    if (c.lightValid === false || c.light === -1 || c.light === null) {
+      setText('dash-light-val', '-1.0');
+      const lightBadge = document.getElementById('dash-light-status');
+      if (lightBadge) {
+        lightBadge.textContent = 'ตรวจไม่พบเซนเซอร์ (BH1750)';
+        lightBadge.className = 'status-badge danger';
+      }
+    } else {
+      setText('dash-light-val', (typeof c.light === 'number') ? c.light.toFixed(1) : '--');
+      setBadgeStatus('dash-light-status', c.light, th.light.min, th.light.max, '%');
+    }
 
     // Mini Trends
     setTrendElem('dash-temp-trend', tr.temp);
@@ -460,13 +478,24 @@
     setText('mon-telemetry', 'Telemetry: Active (2.5s)');
 
     // Update Gauges
-    setText('gauge-val-light', `${c.light.toFixed(1)}%`);
-    setText('gauge-val-temp', `${c.temperature.toFixed(1)}°`);
-    setText('gauge-val-ph', `${c.ph.toFixed(2)}`);
+    if (c.lightValid === false || c.light === -1 || c.light === null) {
+      setText('gauge-val-light', '-1.0 lux');
+      drawDoughnutGauge('gauge-light', 0, 100, '#94a3b8');
+    } else {
+      setText('gauge-val-light', `${c.light.toFixed(1)}%`);
+      drawDoughnutGauge('gauge-light', c.light, 100, '#d97706');
+    }
 
-    drawDoughnutGauge('gauge-light', c.light, 100, '#d97706');
-    drawDoughnutGauge('gauge-temp', (c.temperature - 15) / 25 * 100, 100, '#ef4444');
-    drawDoughnutGauge('gauge-ph', (c.ph - 4) / 6 * 100, 100, '#6366f1');
+    if (c.tempValid === false || c.temperature === -999 || c.temperature === null) {
+      setText('gauge-val-temp', '-999°');
+      drawDoughnutGauge('gauge-temp', 0, 100, '#94a3b8');
+    } else {
+      setText('gauge-val-temp', `${c.temperature.toFixed(1)}°`);
+      drawDoughnutGauge('gauge-temp', (c.temperature - 15) / 25 * 100, 100, '#ef4444');
+    }
+
+    setText('gauge-val-ph', (typeof c.ph === 'number') ? `${c.ph.toFixed(2)}` : '--');
+    drawDoughnutGauge('gauge-ph', typeof c.ph === 'number' ? (c.ph - 4) / 6 * 100 : 0, 100, '#6366f1');
 
     // Rolling Chart
     updateMonitoringLiveChart(engine);
@@ -509,10 +538,19 @@
     const th = engine.thresholds;
     const stats = engine.calculateStatistics(72);
 
-    const tempVal = (typeof c.temperature === 'number' && !isNaN(c.temperature)) ? c.temperature : (c.temp || 28.4);
-    setText('sens-temp-val', `${tempVal.toFixed(1)} °C`);
-    setText('sens-ph-val', `${c.ph.toFixed(2)} pH`);
-    setText('sens-light-val', `${c.light.toFixed(1)} %`);
+    if (c.tempValid === false || c.temperature === -999 || c.temperature === null) {
+      setText('sens-temp-val', `-999.0 °C (รอเซนเซอร์)`);
+    } else {
+      setText('sens-temp-val', `${c.temperature.toFixed(1)} °C`);
+    }
+
+    setText('sens-ph-val', (typeof c.ph === 'number') ? `${c.ph.toFixed(2)} pH` : '-- pH');
+
+    if (c.lightValid === false || c.light === -1 || c.light === null) {
+      setText('sens-light-val', `-1.0 lux (รอเซนเซอร์)`);
+    } else {
+      setText('sens-light-val', `${c.light.toFixed(1)} %`);
+    }
 
     setText('sens-temp-range', `${th.temp.min.toFixed(1)} - ${th.temp.max.toFixed(1)} °C`);
     setText('sens-ph-range', `${th.ph.min.toFixed(1)} - ${th.ph.max.toFixed(1)}`);
@@ -1288,7 +1326,8 @@ GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO anon, authenticated, se
               yAxisID: 'yTemp',
               tension: 0.3,
               fill: true,
-              pointRadius: 2
+              pointRadius: 2,
+              spanGaps: true
             },
             {
               label: 'ค่า pH',
@@ -1297,7 +1336,8 @@ GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO anon, authenticated, se
               backgroundColor: 'transparent',
               yAxisID: 'yPh',
               tension: 0.3,
-              pointRadius: 2
+              pointRadius: 2,
+              spanGaps: true
             }
           ]
         },
@@ -1321,8 +1361,8 @@ GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO anon, authenticated, se
             yPh: {
               type: 'linear',
               position: 'right',
-              min: 5,
-              max: 9,
+              min: 0,
+              max: 14,
               ticks: { font: { family: 'Prompt', size: 10 } },
               grid: { display: false }
             }
@@ -1349,7 +1389,8 @@ GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO anon, authenticated, se
               backgroundColor: 'rgba(217, 119, 6, 0.12)',
               tension: 0.3,
               fill: true,
-              pointRadius: 2
+              pointRadius: 2,
+              spanGaps: true
             }
           ]
         },
@@ -1384,9 +1425,9 @@ GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO anon, authenticated, se
         data: {
           labels: [],
           datasets: [
-            { label: 'Temp (°C)', data: [], borderColor: '#ef4444', tension: 0.3, pointRadius: 2 },
-            { label: 'pH', data: [], borderColor: '#6366f1', tension: 0.3, pointRadius: 2 },
-            { label: 'Light (%)', data: [], borderColor: '#d97706', tension: 0.3, pointRadius: 2 }
+            { label: 'Temp (°C)', data: [], borderColor: '#ef4444', tension: 0.3, pointRadius: 2, spanGaps: true },
+            { label: 'pH', data: [], borderColor: '#6366f1', tension: 0.3, pointRadius: 2, spanGaps: true },
+            { label: 'Light (%)', data: [], borderColor: '#d97706', tension: 0.3, pointRadius: 2, spanGaps: true }
           ]
         },
         options: {
@@ -1413,14 +1454,14 @@ GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO anon, authenticated, se
 
     if (charts.tempPh) {
       charts.tempPh.data.labels = labels;
-      charts.tempPh.data.datasets[0].data = history.map(d => d.temp);
-      charts.tempPh.data.datasets[1].data = history.map(d => d.ph);
+      charts.tempPh.data.datasets[0].data = history.map(d => (d.tempValid && d.temp > -40) ? d.temp : null);
+      charts.tempPh.data.datasets[1].data = history.map(d => (d.phValid && d.ph >= 0) ? d.ph : null);
       charts.tempPh.update('none');
     }
 
     if (charts.waterLight) {
       charts.waterLight.data.labels = labels;
-      charts.waterLight.data.datasets[0].data = history.map(d => d.light);
+      charts.waterLight.data.datasets[0].data = history.map(d => (d.lightValid && d.light >= 0) ? d.light : null);
       charts.waterLight.update('none');
     }
   }
@@ -1434,9 +1475,9 @@ GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO anon, authenticated, se
     });
 
     charts.liveRolling.data.labels = labels;
-    charts.liveRolling.data.datasets[0].data = history.map(d => d.temp);
-    charts.liveRolling.data.datasets[1].data = history.map(d => d.ph);
-    charts.liveRolling.data.datasets[2].data = history.map(d => d.light);
+    charts.liveRolling.data.datasets[0].data = history.map(d => (d.tempValid && d.temp > -40) ? d.temp : null);
+    charts.liveRolling.data.datasets[1].data = history.map(d => (d.phValid && d.ph >= 0) ? d.ph : null);
+    charts.liveRolling.data.datasets[2].data = history.map(d => (d.lightValid && d.light >= 0) ? d.light : null);
     charts.liveRolling.update('none');
   }
 
@@ -1724,8 +1765,8 @@ GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO anon, authenticated, se
         const packet = {
           device_id: 'ESP32-WOLFFIA-01',
           ph: (phRaw >= 0 && phRaw <= 14) ? phRaw : undefined,
-          temperature: (tempRaw > -40 && tempRaw < 100) ? tempRaw : undefined,
-          light: (lightRaw >= 0) ? lightRaw : undefined,
+          temperature: (tempRaw > -40 && tempRaw < 100) ? tempRaw : (tempRaw === -999.0 ? -999.0 : undefined),
+          light: (lightRaw >= 0) ? lightRaw : (lightRaw === -1.0 ? -1.0 : undefined),
           created_at: new Date().toISOString()
         };
 
