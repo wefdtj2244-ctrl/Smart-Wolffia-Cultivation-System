@@ -241,19 +241,16 @@
     // Sensor Cards Values
     setText('dash-temp-val', c.temperature.toFixed(1));
     setText('dash-ph-val', c.ph.toFixed(2));
-    setText('dash-water-val', c.waterLevel.toFixed(1));
     setText('dash-light-val', c.light.toFixed(1));
 
     // Status Badges
     setBadgeStatus('dash-temp-status', c.temperature, th.temp.min, th.temp.max, '°C');
     setBadgeStatus('dash-ph-status', c.ph, th.ph.min, th.ph.max, '');
-    setBadgeStatus('dash-water-status', c.waterLevel, th.waterLevel.min, th.waterLevel.max, '%');
     setBadgeStatus('dash-light-status', c.light, th.light.min, th.light.max, '%');
 
     // Mini Trends
     setTrendElem('dash-temp-trend', tr.temp);
     setTrendElem('dash-ph-trend', tr.ph);
-    setTrendElem('dash-water-trend', tr.waterLevel);
     setTrendElem('dash-light-trend', tr.light);
 
     // Light unit dynamically switches to 'lux' if readings exceed 100
@@ -317,7 +314,7 @@
           banner.style.borderLeftColor = '#16a34a';
           if (bDot) bDot.className = 'pulse-dot online';
           bTitle.innerHTML = `<span style="color:#166534">🟢 รับข้อมูลสดจากบอร์ด ESP32 ผ่านสาย USB สำเร็จ!</span>`;
-          bSub.textContent = `พอร์ต USB Serial (115200 Baud) • Temp: ${c.temperature.toFixed(1)}°C | pH: ${c.ph.toFixed(2)} | น้ำ: ${c.waterLevel.toFixed(1)}% | แสง: ${c.light.toFixed(1)}${c.light > 100 ? ' lx' : '%'} | ปั๊ม: ${c.pumpStatus ? 'ON' : 'OFF'} | โหมด: ${c.systemMode || 'AUTO'}`;
+          bSub.textContent = `พอร์ต USB Serial (115200 Baud) • Temp: ${c.temperature.toFixed(1)}°C | pH: ${c.ph.toFixed(2)} | แสง: ${c.light.toFixed(1)}${c.light > 100 ? ' lx' : '%'} | ปั๊ม: ${c.pumpStatus ? 'ON' : 'OFF'} | โหมด: ${c.systemMode || 'AUTO'}`;
           if (bLast) bLast.textContent = `สด (USB)`;
           if (btnUsb) {
             btnUsb.innerHTML = '<i class="fa-solid fa-link-slash"></i> ตัดการเชื่อมต่อ USB';
@@ -463,12 +460,10 @@
     setText('mon-telemetry', 'Telemetry: Active (2.5s)');
 
     // Update Gauges
-    setText('gauge-val-water', `${c.waterLevel.toFixed(1)}%`);
     setText('gauge-val-light', `${c.light.toFixed(1)}%`);
     setText('gauge-val-temp', `${c.temperature.toFixed(1)}°`);
     setText('gauge-val-ph', `${c.ph.toFixed(2)}`);
 
-    drawDoughnutGauge('gauge-water', c.waterLevel, 100, '#2563eb');
     drawDoughnutGauge('gauge-light', c.light, 100, '#d97706');
     drawDoughnutGauge('gauge-temp', (c.temperature - 15) / 25 * 100, 100, '#ef4444');
     drawDoughnutGauge('gauge-ph', (c.ph - 4) / 6 * 100, 100, '#6366f1');
@@ -517,12 +512,10 @@
     const tempVal = (typeof c.temperature === 'number' && !isNaN(c.temperature)) ? c.temperature : (c.temp || 28.4);
     setText('sens-temp-val', `${tempVal.toFixed(1)} °C`);
     setText('sens-ph-val', `${c.ph.toFixed(2)} pH`);
-    setText('sens-water-val', `${c.waterLevel.toFixed(1)} %`);
     setText('sens-light-val', `${c.light.toFixed(1)} %`);
 
     setText('sens-temp-range', `${th.temp.min.toFixed(1)} - ${th.temp.max.toFixed(1)} °C`);
     setText('sens-ph-range', `${th.ph.min.toFixed(1)} - ${th.ph.max.toFixed(1)}`);
-    setText('sens-water-range', `${th.waterLevel.min} - ${th.waterLevel.max} %`);
     setText('sens-light-range', `${th.light.min} - ${th.light.max} %`);
 
     const tempMin = (stats.temp && typeof stats.temp.min === 'number' && !isNaN(stats.temp.min)) ? stats.temp.min : 26.2;
@@ -537,10 +530,6 @@
     setText('sens-ph-avg', `${stats.ph.avg}`);
     setText('sens-ph-max', `${stats.ph.max}`);
 
-    setText('sens-water-min', `${stats.water.min}%`);
-    setText('sens-water-avg', `${stats.water.avg}%`);
-    setText('sens-water-max', `${stats.water.max}%`);
-
     setText('sens-light-min', `${stats.light.min}%`);
     setText('sens-light-avg', `${stats.light.avg}%`);
     setText('sens-light-max', `${stats.light.max}%`);
@@ -548,7 +537,6 @@
     // Sparklines
     renderSparkline('spark-temp', stats.temp.trend, '#ef4444');
     renderSparkline('spark-ph', stats.ph.trend, '#6366f1');
-    renderSparkline('spark-water', stats.water.trend, '#2563eb');
     renderSparkline('spark-light', stats.light.trend, '#d97706');
   }
 
@@ -585,7 +573,6 @@
       const isOutOfRange = (
         row.temp < th.temp.min || row.temp > th.temp.max ||
         row.ph < th.ph.min || row.ph > th.ph.max ||
-        row.waterLevel < th.waterLevel.min ||
         row.light < th.light.min
       );
       if (statusFilter === 'normal' && isOutOfRange) return false;
@@ -593,7 +580,7 @@
 
       // Text Search
       if (searchText) {
-        const fullStr = `${row.timestamp} ${row.temp} ${row.ph} ${row.waterLevel} ${row.light}`.toLowerCase();
+        const fullStr = `${row.timestamp} ${row.temp} ${row.ph} ${row.light}`.toLowerCase();
         if (!fullStr.includes(searchText)) return false;
       }
 
@@ -624,7 +611,7 @@
     const pageRows = filteredHistory.slice(startIdx, startIdx + historyPageSize);
 
     if (pageRows.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:2rem; color:var(--text-muted)">ไม่พบข้อมูลตามตัวกรองที่เลือก</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:2rem; color:var(--text-muted)">ไม่พบข้อมูลตามตัวกรองที่เลือก</td></tr>`;
       setText('hist-page-info', 'แสดง 0 รายการ');
       return;
     }
@@ -635,14 +622,12 @@
       const dateStr = new Date(r.timestamp).toLocaleString('th-TH');
       const tempAlert = r.temp < th.temp.min || r.temp > th.temp.max;
       const phAlert = r.ph < th.ph.min || r.ph > th.ph.max;
-      const waterAlert = r.waterLevel < th.waterLevel.min;
 
       return `
         <tr>
           <td><i class="fa-regular fa-clock" style="color:var(--text-muted); margin-right:0.35rem"></i>${dateStr}</td>
           <td><span style="font-weight:600; color:${tempAlert ? '#ef4444' : 'inherit'}">${r.temp.toFixed(1)} °C</span></td>
           <td><span style="font-weight:600; color:${phAlert ? '#f59e0b' : 'inherit'}">${r.ph.toFixed(2)}</span></td>
-          <td><span style="font-weight:600; color:${waterAlert ? '#ef4444' : 'inherit'}">${r.waterLevel.toFixed(1)}%</span></td>
           <td>${r.light.toFixed(1)}%</td>
           <td>
             <span class="status-badge normal"><span class="pulse-dot online"></span> ${r.deviceStatus}</span>
@@ -707,11 +692,6 @@
     setText('stat-ph-max', `${stats.ph.max}`);
     setText('stat-ph-sd', `±${stats.ph.sd}`);
 
-    setText('stat-water-avg', `${stats.water.avg} %`);
-    setText('stat-water-min', `${stats.water.min} %`);
-    setText('stat-water-max', `${stats.water.max} %`);
-    setText('stat-water-sd', `±${stats.water.sd} %`);
-
     setText('stat-light-avg', `${stats.light.avg} %`);
     setText('stat-light-min', `${stats.light.min} %`);
     setText('stat-light-max', `${stats.light.max} %`);
@@ -720,7 +700,6 @@
     // Trend Sparklines
     renderSparkline('chart-stat-spark-temp', stats.temp.trend, '#ef4444');
     renderSparkline('chart-stat-spark-ph', stats.ph.trend, '#6366f1');
-    renderSparkline('chart-stat-spark-water', stats.water.trend, '#2563eb');
     renderSparkline('chart-stat-spark-light', stats.light.trend, '#d97706');
 
     // Weekly Summary Table
@@ -731,7 +710,6 @@
           <td><strong>${w.day}</strong></td>
           <td>${w.avgTemp} °C</td>
           <td>${w.avgPh}</td>
-          <td>${w.avgWater}%</td>
           <td>${w.avgLight}%</td>
           <td><span class="status-badge normal">${w.growthIndex}</span></td>
         </tr>
@@ -762,7 +740,6 @@
 
     setText('health-sub-temp', `${health.components.temp}%`);
     setText('health-sub-ph', `${health.components.ph}%`);
-    setText('health-sub-water', `${health.components.water}%`);
     setText('health-sub-light', `${health.components.light}%`);
 
     // Insights
@@ -903,7 +880,6 @@
     setText('rep-generated-date', new Date().toLocaleString('th-TH'));
     setText('rep-avg-temp', `${stats.temp.avg} °C`);
     setText('rep-avg-ph', `${stats.ph.avg}`);
-    setText('rep-avg-water', `${stats.water.avg} %`);
     setText('rep-avg-light', `${stats.light.avg} %`);
 
     showToast('คำนวณและสร้างรายงานสรุปใหม่เรียบร้อย', 'success');
@@ -1004,8 +980,6 @@
     setValSafe('cfg-temp-max', th.temp.max);
     setValSafe('cfg-ph-min', th.ph.min);
     setValSafe('cfg-ph-max', th.ph.max);
-    setValSafe('cfg-water-min', th.waterLevel.min);
-    setValSafe('cfg-water-max', th.waterLevel.max);
     setValSafe('cfg-light-min', th.light.min);
     setValSafe('cfg-light-max', th.light.max);
 
@@ -1117,11 +1091,6 @@
         max: parseFloat(document.getElementById('cfg-ph-max')?.value || 7.5),
         unit: ''
       },
-      waterLevel: {
-        min: parseFloat(document.getElementById('cfg-water-min')?.value || 70),
-        max: parseFloat(document.getElementById('cfg-water-max')?.value || 90),
-        unit: '%'
-      },
       light: {
         min: parseFloat(document.getElementById('cfg-light-min')?.value || 50),
         max: parseFloat(document.getElementById('cfg-light-max')?.value || 80),
@@ -1196,7 +1165,6 @@
     const sample = {
       temperature: parseFloat((27 + Math.random() * 4).toFixed(2)),
       ph: parseFloat((6.7 + Math.random() * 0.6).toFixed(2)),
-      waterLevel: parseFloat((75 + Math.random() * 10).toFixed(1)),
       light: parseFloat((55 + Math.random() * 25).toFixed(1)),
       rssi: -58,
       deviceStatus: 'Online'
@@ -1210,7 +1178,7 @@
     }
 
     if (result.success) {
-      showToast(`ส่งข้อมูลตัวอย่างสำเร็จ: Temp ${sample.temperature}°C, pH ${sample.ph}, Water ${sample.waterLevel}%`, 'success');
+      showToast(`ส่งข้อมูลตัวอย่างสำเร็จ: Temp ${sample.temperature}°C, pH ${sample.ph}, Light ${sample.light}%`, 'success');
     } else {
       showToast(result.message, 'error');
     }
@@ -1226,7 +1194,6 @@ CREATE TABLE IF NOT EXISTS public.sensor_readings (
   temperature NUMERIC(5, 2),
   ph NUMERIC(4, 2),
   light NUMERIC(8, 2),
-  water_level NUMERIC(5, 1),
   pump_status BOOLEAN DEFAULT false,
   system_mode TEXT DEFAULT 'AUTO',
   system_status TEXT DEFAULT 'NORMAL'
@@ -1239,7 +1206,6 @@ CREATE TABLE IF NOT EXISTS public.wolffia_telemetry (
   device_id TEXT DEFAULT 'ESP32-WOLFFIA-01' NOT NULL,
   temperature NUMERIC(5, 2) NOT NULL,
   ph NUMERIC(4, 2) NOT NULL,
-  water_level NUMERIC(5, 1) NOT NULL,
   light NUMERIC(6, 1) NOT NULL,
   rssi INTEGER DEFAULT -58,
   device_status TEXT DEFAULT 'Online'
@@ -1368,7 +1334,7 @@ GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO anon, authenticated, se
       });
     }
 
-    // Chart 2: Water Level & Light
+    // Chart 2: Light Intensity
     const ctxWaterLight = document.getElementById('chart-water-light');
     if (ctxWaterLight) {
       charts.waterLight = new Chart(ctxWaterLight, {
@@ -1377,19 +1343,10 @@ GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO anon, authenticated, se
           labels: [],
           datasets: [
             {
-              label: 'ระดับน้ำ (%)',
-              data: [],
-              borderColor: '#2563eb',
-              backgroundColor: 'rgba(37, 99, 235, 0.1)',
-              tension: 0.3,
-              fill: true,
-              pointRadius: 2
-            },
-            {
               label: 'ความเข้มแสง (%)',
               data: [],
               borderColor: '#d97706',
-              backgroundColor: 'rgba(217, 119, 6, 0.08)',
+              backgroundColor: 'rgba(217, 119, 6, 0.12)',
               tension: 0.3,
               fill: true,
               pointRadius: 2
@@ -1429,7 +1386,6 @@ GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO anon, authenticated, se
           datasets: [
             { label: 'Temp (°C)', data: [], borderColor: '#ef4444', tension: 0.3, pointRadius: 2 },
             { label: 'pH', data: [], borderColor: '#6366f1', tension: 0.3, pointRadius: 2 },
-            { label: 'Water (%)', data: [], borderColor: '#2563eb', tension: 0.3, pointRadius: 2 },
             { label: 'Light (%)', data: [], borderColor: '#d97706', tension: 0.3, pointRadius: 2 }
           ]
         },
@@ -1464,8 +1420,7 @@ GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO anon, authenticated, se
 
     if (charts.waterLight) {
       charts.waterLight.data.labels = labels;
-      charts.waterLight.data.datasets[0].data = history.map(d => d.waterLevel);
-      charts.waterLight.data.datasets[1].data = history.map(d => d.light);
+      charts.waterLight.data.datasets[0].data = history.map(d => d.light);
       charts.waterLight.update('none');
     }
   }
@@ -1481,8 +1436,7 @@ GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO anon, authenticated, se
     charts.liveRolling.data.labels = labels;
     charts.liveRolling.data.datasets[0].data = history.map(d => d.temp);
     charts.liveRolling.data.datasets[1].data = history.map(d => d.ph);
-    charts.liveRolling.data.datasets[2].data = history.map(d => d.waterLevel);
-    charts.liveRolling.data.datasets[3].data = history.map(d => d.light);
+    charts.liveRolling.data.datasets[2].data = history.map(d => d.light);
     charts.liveRolling.update('none');
   }
 
@@ -1759,21 +1713,19 @@ GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO anon, authenticated, se
     if (!engine) return;
 
     try {
-      // 1. Exact Match for ESP32 Firmware V6 Serial Output:
-      // "SENSOR | pH=7.15 | Temp=28.50 C | Light=1200.00 lux | Water=85.0%"
-      const sensorV6Match = line.match(/SENSOR\s*\|\s*pH=([-+]?\d*\.?\d+)\s*\|\s*Temp=([-+]?\d*\.?\d+)\s*C\s*\|\s*Light=([-+]?\d*\.?\d+)\s*lux\s*\|\s*Water=([-+]?\d*\.?\d+)%/i);
+      // 1. Match ESP32 Serial Output:
+      // "SENSOR | pH=7.15 | Temp=28.50 C | Light=1200.00 lux"
+      const sensorV6Match = line.match(/SENSOR\s*\|\s*pH=([-+]?\d*\.?\d+)\s*\|\s*Temp=([-+]?\d*\.?\d+)\s*C\s*\|\s*Light=([-+]?\d*\.?\d+)\s*lux(?:\s*\|\s*Water=([-+]?\d*\.?\d+)%)?/i);
       if (sensorV6Match) {
         const phRaw = parseFloat(sensorV6Match[1]);
         const tempRaw = parseFloat(sensorV6Match[2]);
         const lightRaw = parseFloat(sensorV6Match[3]);
-        const waterRaw = parseFloat(sensorV6Match[4]);
 
         const packet = {
           device_id: 'ESP32-WOLFFIA-01',
           ph: (phRaw >= 0 && phRaw <= 14) ? phRaw : undefined,
           temperature: (tempRaw > -40 && tempRaw < 100) ? tempRaw : undefined,
           light: (lightRaw >= 0) ? lightRaw : undefined,
-          water_level: (waterRaw >= 0 && waterRaw <= 100) ? waterRaw : undefined,
           created_at: new Date().toISOString()
         };
 
@@ -1844,8 +1796,6 @@ GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO anon, authenticated, se
                 if (num > -40 && num < 100) { lineData.temperature = num; hasMatch = true; }
               } else if (k.includes('ph') || k.includes('กรด')) {
                 if (num >= 0 && num <= 14) { lineData.ph = num; hasMatch = true; }
-              } else if (k.includes('water') || k.includes('level') || k.includes('น้ำ')) {
-                if (num >= 0 && num <= 100) { lineData.water_level = num; hasMatch = true; }
               } else if (k.includes('light') || k.includes('lux') || k.includes('แสง')) {
                 if (num >= 0) { lineData.light = num; hasMatch = true; }
               } else if (k.includes('rssi')) {

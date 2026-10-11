@@ -21,7 +21,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   
   <!-- Stylesheets -->
-  <link rel="stylesheet" href="styles.css?v=20261010-07">
+  <link rel="stylesheet" href="styles.css?v=20261011-09">
 </head>
 <body>
 
@@ -136,7 +136,7 @@
         </div>
         <div style="display:flex; justify-content:space-between; color:var(--text-muted); font-size:0.72rem; margin-top:0.25rem">
           <span>เซนเซอร์:</span>
-          <span style="font-weight:600; color:var(--color-success)">4 ตัว (Active)</span>
+          <span style="font-weight:600; color:var(--color-success)">3 ตัว (Active)</span>
         </div>
         <button type="button" class="btn btn-primary btn-sm" id="btn-sidebar-usb" onclick="toggleUsbSerialConnection()" style="width:100%; margin-top:0.6rem; font-size:0.78rem; font-weight:700; justify-content:center; background:#16a34a; border:1px solid #15803d; color:#ffffff; cursor:pointer">
           <i class="fa-brands fa-usb"></i> <span>ต่อบอร์ด USB</span>
@@ -229,8 +229,8 @@
           </div>
         </div>
 
-        <!-- 4 Sensor Overview Cards -->
-        <div class="sensor-grid-4">
+        <!-- 3 Sensor Overview Cards -->
+        <div class="sensor-grid-3">
           
           <!-- Temperature Card -->
           <div class="sensor-card">
@@ -274,27 +274,6 @@
             </div>
           </div>
 
-          <!-- Water Level Card -->
-          <div class="sensor-card">
-            <div class="sensor-card-top">
-              <div class="sensor-icon-wrapper sensor-icon-water">
-                <i class="fa-solid fa-droplet"></i>
-              </div>
-              <span class="status-badge normal" id="dash-water-status">ปกติ</span>
-            </div>
-            <div class="sensor-label">ระดับน้ำในบ่อเพาะ (Water Level)</div>
-            <div class="sensor-value-group">
-              <span class="sensor-value" id="dash-water-val">78.5</span>
-              <span class="sensor-unit">%</span>
-            </div>
-            <div class="sensor-footer">
-              <div class="mini-trend down" id="dash-water-trend">
-                <i class="fa-solid fa-arrow-trend-down"></i> <span>-0.4%</span>
-              </div>
-              <div class="optimal-range-text">เกณฑ์: 70 - 90%</div>
-            </div>
-          </div>
-
           <!-- Light Intensity Card -->
           <div class="sensor-card">
             <div class="sensor-card-top">
@@ -334,13 +313,13 @@
             </div>
           </div>
 
-          <!-- Chart 2: Water Level & Light Intensity -->
+          <!-- Chart 2: Light Intensity -->
           <div class="chart-card">
             <div class="chart-header">
               <div class="chart-title">
-                <i class="fa-solid fa-chart-area" style="color:#2563eb"></i> ระดับน้ำ (%) และความเข้มแสง (%)
+                <i class="fa-solid fa-sun" style="color:#d97706"></i> ความเข้มแสง (%) (Light Intensity)
               </div>
-              <span style="font-size:0.75rem; color:var(--text-muted)">Environment Metrics</span>
+              <span style="font-size:0.75rem; color:var(--text-muted)">Light Spectrum Metric</span>
             </div>
             <div class="chart-canvas-wrapper">
               <canvas id="chart-water-light"></canvas>
@@ -474,20 +453,8 @@
           </div>
         </div>
 
-        <!-- 4 Circular Gauge Indicators -->
-        <div class="gauge-grid-4">
-          
-          <div class="gauge-card">
-            <div class="gauge-circle-container">
-              <canvas id="gauge-water" width="130" height="130"></canvas>
-              <div class="gauge-inner-text">
-                <div class="gauge-inner-val" id="gauge-val-water" style="color:#2563eb">78.5%</div>
-                <div class="gauge-inner-label">ระดับน้ำ</div>
-              </div>
-            </div>
-            <h4 style="font-size:0.9rem">ระดับน้ำในบ่อเพาะ</h4>
-            <p style="font-size:0.75rem; color:var(--text-muted); margin-top:0.2rem">เกณฑ์ปกติ: 70 - 90%</p>
-          </div>
+        <!-- 3 Circular Gauge Indicators -->
+        <div class="gauge-grid-3">
 
           <div class="gauge-card">
             <div class="gauge-circle-container">
@@ -639,38 +606,7 @@
             </div>
           </div>
 
-          <!-- Sensor 3: Ultrasonic Water Level Sensor -->
-          <div class="card">
-            <div class="card-header">
-              <div class="card-title" style="font-size:0.95rem">
-                <i class="fa-solid fa-water" style="color:#2563eb"></i> เซนเซอร์ระดับน้ำ (JSN-SR04T)
-              </div>
-              <span class="status-badge normal"><span class="pulse-dot online"></span> Connected</span>
-            </div>
-            <div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:0.75rem">
-              <div>
-                <span style="font-size:0.75rem; color:var(--text-muted)">ค่าที่อ่านได้ปัจจุบัน</span>
-                <div style="font-size:1.8rem; font-weight:700; font-family:var(--font-heading)" id="sens-water-val">78.5 %</div>
-              </div>
-              <div style="text-align:right">
-                <span style="font-size:0.75rem; color:var(--text-muted)">ช่วงปกติที่ตั้งไว้</span>
-                <div style="font-size:0.85rem; font-weight:600; color:var(--primary)" id="sens-water-range">70 - 90 %</div>
-              </div>
-            </div>
-            <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:0.5rem; background:var(--bg-surface-subtle); padding:0.6rem; border-radius:var(--radius-md); font-size:0.75rem; margin-bottom:0.75rem; text-align:center">
-              <div><span style="color:var(--text-muted)">ต่ำสุด (Min)</span><div style="font-weight:700" id="sens-water-min">68.5%</div></div>
-              <div><span style="color:var(--text-muted)">เฉลี่ย (Avg)</span><div style="font-weight:700" id="sens-water-avg">79.2%</div></div>
-              <div><span style="color:var(--text-muted)">สูงสุด (Max)</span><div style="font-weight:700" id="sens-water-max">88.0%</div></div>
-            </div>
-            <div style="height:60px">
-              <canvas id="spark-water"></canvas>
-            </div>
-            <div style="font-size:0.72rem; color:var(--text-muted); margin-top:0.5rem">
-              GPIO Pin: 5 (Trig) / 18 (Echo) • คลื่นอัลตราโซนิกกันน้ำแบบไม่สัมผัสผิวน้ำ
-            </div>
-          </div>
-
-          <!-- Sensor 4: BH1750 Light Sensor -->
+          <!-- Sensor 3: BH1750 Light Sensor -->
           <div class="card">
             <div class="card-header">
               <div class="card-title" style="font-size:0.95rem">
@@ -774,7 +710,6 @@
                 <th>วันและเวลา (Timestamp)</th>
                 <th>อุณหภูมิน้ำ (°C)</th>
                 <th>ค่า pH</th>
-                <th>ระดับน้ำ (%)</th>
                 <th>ความเข้มแสง (%)</th>
                 <th>สถานะอุปกรณ์</th>
               </tr>
@@ -818,7 +753,7 @@
           </div>
         </div>
 
-        <!-- 4 Stat Cards with Standard Deviation & Sparklines -->
+        <!-- 3 Stat Cards with Standard Deviation & Sparklines -->
         <div class="stats-metric-grid">
           
           <!-- Temp Stats -->
@@ -879,35 +814,6 @@
             </div>
           </div>
 
-          <!-- Water Level Stats -->
-          <div class="stat-metric-card">
-            <div class="stat-metric-header">
-              <span><i class="fa-solid fa-droplet" style="color:#2563eb"></i> ระดับน้ำ (Water Level)</span>
-              <span style="font-size:0.75rem; color:var(--text-muted)">หน่วย: %</span>
-            </div>
-            <div class="stat-values-list">
-              <div class="stat-val-item">
-                <span style="color:var(--text-muted)">ค่าเฉลี่ย (Mean):</span>
-                <span style="font-weight:700; color:var(--text-main)" id="stat-water-avg">-</span>
-              </div>
-              <div class="stat-val-item">
-                <span style="color:var(--text-muted)">ค่าต่ำสุด (Min):</span>
-                <span style="font-weight:600" id="stat-water-min">-</span>
-              </div>
-              <div class="stat-val-item">
-                <span style="color:var(--text-muted)">ค่าสูงสุด (Max):</span>
-                <span style="font-weight:600" id="stat-water-max">-</span>
-              </div>
-              <div class="stat-val-item">
-                <span style="color:var(--text-muted)">ส่วนเบี่ยงเบนมาตรฐาน (SD):</span>
-                <span style="font-weight:700; color:#2563eb" id="stat-water-sd">±0.00</span>
-              </div>
-            </div>
-            <div class="stat-spark-wrapper">
-              <canvas id="chart-stat-spark-water"></canvas>
-            </div>
-          </div>
-
           <!-- Light Stats -->
           <div class="stat-metric-card">
             <div class="stat-metric-header">
@@ -954,7 +860,6 @@
                   <th>วัน</th>
                   <th>Avg Temp</th>
                   <th>Avg pH</th>
-                  <th>Avg Water</th>
                   <th>Avg Light</th>
                   <th>ดัชนีการเติบโต</th>
                 </tr>
@@ -994,7 +899,7 @@
             </span>
             <h3 style="font-size:1.15rem; margin-bottom:0.35rem">สภาพแวดล้อมสมบูรณ์แบบต่อการแบ่งตัวและสร้างโปรตีน</h3>
             <p style="font-size:0.85rem; color:var(--text-secondary)">
-              ระบบคำนวณถ่วงน้ำหนักจากอุณหภูมิ (30%), pH (30%), ระดับน้ำ (20%) และความเข้มแสง (20%) เทียบกับชุดสเปกตรัมที่เหมาะสมที่สุดของไข่ผำสายพันธุ์ Wolffia globosa
+              ระบบคำนวณถ่วงน้ำหนักจากอุณหภูมิ (40%), pH (35%) และความเข้มแสง (25%) เทียบกับชุดสเปกตรัมที่เหมาะสมที่สุดของไข่ผำสายพันธุ์ Wolffia globosa
             </p>
             <div class="health-breakdown-bar">
               <div class="health-sub-metric">
@@ -1004,10 +909,6 @@
               <div class="health-sub-metric">
                 <span style="color:var(--text-muted)">ความสมดุล pH:</span>
                 <span style="font-weight:700; float:right" id="health-sub-ph">93%</span>
-              </div>
-              <div class="health-sub-metric">
-                <span style="color:var(--text-muted)">ระดับน้ำในบ่อ:</span>
-                <span style="font-weight:700; float:right" id="health-sub-water">90%</span>
               </div>
               <div class="health-sub-metric">
                 <span style="color:var(--text-muted)">ความเข้มแสง:</span>
@@ -1169,7 +1070,7 @@
           <!-- Section 1: Executive Summary -->
           <div style="margin-bottom:1.75rem">
             <h3 style="font-size:1.05rem; margin-bottom:0.75rem; color:var(--primary)">1. สรุปผลการดำเนินงานเชิงสถิติ (Executive Summary)</h3>
-            <div style="display:grid; grid-template-columns:repeat(4, 1fr); gap:1rem; text-align:center" class="stats-metric-grid">
+            <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:1rem; text-align:center" class="stats-metric-grid">
               <div style="background:var(--bg-surface-subtle); padding:1rem; border-radius:var(--radius-md)">
                 <span style="font-size:0.75rem; color:var(--text-muted)">อุณหภูมิน้ำเฉลี่ย</span>
                 <div style="font-size:1.5rem; font-weight:700; color:#ef4444" id="rep-avg-temp">28.3 °C</div>
@@ -1179,11 +1080,6 @@
                 <span style="font-size:0.75rem; color:var(--text-muted)">ค่า pH เฉลี่ย</span>
                 <div style="font-size:1.5rem; font-weight:700; color:#6366f1" id="rep-avg-ph">6.95</div>
                 <span style="font-size:0.72rem; color:var(--color-normal)">สมดุลกรด-ด่างดีเยี่ยม</span>
-              </div>
-              <div style="background:var(--bg-surface-subtle); padding:1rem; border-radius:var(--radius-md)">
-                <span style="font-size:0.75rem; color:var(--text-muted)">ระดับน้ำเฉลี่ย</span>
-                <div style="font-size:1.5rem; font-weight:700; color:#2563eb" id="rep-avg-water">79.2 %</div>
-                <span style="font-size:0.72rem; color:var(--color-normal)">ระดับน้ำอยู่ในเกณฑ์เหมาะสม</span>
               </div>
               <div style="background:var(--bg-surface-subtle); padding:1rem; border-radius:var(--radius-md)">
                 <span style="font-size:0.75rem; color:var(--text-muted)">ความเข้มแสงเฉลี่ย</span>
@@ -1209,9 +1105,9 @@
                 <tbody id="rep-incidents-body">
                   <tr>
                     <td>2026-09-28 11:20:00</td>
-                    <td><span class="status-badge warning">ระดับน้ำลดลงแตะ 68.5%</span></td>
-                    <td>68.5%</td>
-                    <td>แจ้งเตือนระดับน้ำต่ำกว่าเกณฑ์ - ระบบบันทึกและแจ้งเตือนผู้ดูแลเรียบร้อย</td>
+                    <td><span class="status-badge warning">ความเข้มแสงต่ำกว่าเกณฑ์ 42.0%</span></td>
+                    <td>42.0%</td>
+                    <td>แสงแดดถูกบดบังชั่วคราว - ระบบเปิดไฟช่วยสังเคราะห์แสงอัตโนมัติ</td>
                   </tr>
                   <tr>
                     <td>2026-09-28 13:10:00</td>
@@ -1276,8 +1172,8 @@
             </div>
             <div>
               <span style="font-size:0.75rem; color:var(--text-muted)">เซนเซอร์ตรวจวัดที่ติดตั้ง</span>
-              <div style="font-weight:700; font-size:1rem; margin-top:0.2rem">4/4 เซนเซอร์ทำงานสมบูรณ์</div>
-              <span style="font-size:0.75rem; color:var(--color-normal)">DS18B20, pH, Water, Light</span>
+              <div style="font-weight:700; font-size:1rem; margin-top:0.2rem">3/3 เซนเซอร์ทำงานสมบูรณ์</div>
+              <span style="font-size:0.75rem; color:var(--color-normal)">DS18B20, pH, Light</span>
             </div>
           </div>
         </div>
@@ -1353,13 +1249,7 @@
                   <td>Analog Voltage (0-3.3V)</td>
                   <td><span class="status-badge normal"><span class="pulse-dot online"></span> Calibrated / Normal</span></td>
                 </tr>
-                <tr>
-                  <td><strong>GPIO 5 / 18</strong></td>
-                  <td>Digital Out / In</td>
-                  <td>JSN-SR04T อัลตราโซนิกวัดระดับน้ำ</td>
-                  <td>Pulse Width (Trig: 5, Echo: 18)</td>
-                  <td><span class="status-badge normal"><span class="pulse-dot online"></span> Active / Normal</span></td>
-                </tr>
+
                 <tr>
                   <td><strong>GPIO 21 / 22</strong></td>
                   <td>I2C Bus (SDA/SCL)</td>
@@ -1446,23 +1336,6 @@
                   <div>
                     <span style="font-size:0.75rem; color:var(--text-muted)">สูงสุด (Max pH):</span>
                     <input type="number" step="0.1" id="cfg-ph-max" class="form-input" style="width:100%" required>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Water Level Threshold -->
-              <div style="margin-bottom:1rem">
-                <label style="font-size:0.85rem; font-weight:600; display:block; margin-bottom:0.35rem">
-                  <i class="fa-solid fa-droplet" style="color:#2563eb"></i> ระดับน้ำในบ่อเพาะ (%)
-                </label>
-                <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.75rem">
-                  <div>
-                    <span style="font-size:0.75rem; color:var(--text-muted)">ต่ำสุด (Min %):</span>
-                    <input type="number" step="1" id="cfg-water-min" class="form-input" style="width:100%" required>
-                  </div>
-                  <div>
-                    <span style="font-size:0.75rem; color:var(--text-muted)">สูงสุด (Max %):</span>
-                    <input type="number" step="1" id="cfg-water-max" class="form-input" style="width:100%" required>
                   </div>
                 </div>
               </div>
@@ -1576,9 +1449,9 @@
   <div class="toast-container" id="toast-container"></div>
 
   <!-- Scripts with cache busting query strings -->
-  <script src="db-config.js?v=20261010-08"></script>
-  <script src="data-engine.js?v=20261010-08"></script>
-  <script src="app.js?v=20261010-08"></script>
+  <script src="db-config.js?v=20261011-09"></script>
+  <script src="data-engine.js?v=20261011-09"></script>
+  <script src="app.js?v=20261011-09"></script>
 
   <!-- Inline Failsafe: Guarantees input values are always preserved and filled -->
   <script>

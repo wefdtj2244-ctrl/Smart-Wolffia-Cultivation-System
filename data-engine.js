@@ -3,7 +3,7 @@
  * Central Data Engine & State Store (Single Source of Truth)
  * 
  * Provides unified state management for:
- * - Real-time telemetry (Temp, pH, Water Level, Light, Device Status, RSSI)
+ * - Real-time telemetry (Temp, pH, Light, Device Status, RSSI)
  * - Central Demo Simulation Engine (Physics-aware Random Walk)
  * - Historical data management & dynamic statistical calculations
  * - Alerts, Activities, Control commands, and Threshold configuration
@@ -27,7 +27,6 @@
   const DEFAULT_THRESHOLDS = {
     temp: { min: 25.0, max: 32.0, unit: '°C', label: 'อุณหภูมิน้ำ' },
     ph: { min: 6.5, max: 7.5, unit: '', label: 'ค่าความเป็นกรด-ด่าง (pH)' },
-    waterLevel: { min: 70.0, max: 90.0, unit: '%', label: 'ระดับน้ำ' },
     light: { min: 50.0, max: 80.0, unit: '%', label: 'ความเข้มแสง' }
   };
 
@@ -66,7 +65,6 @@
         deviceId: this.device.deviceId,
         temperature: 28.4,
         ph: 6.95,
-        waterLevel: 78.5,
         light: 65.0,
         pumpStatus: false,
         systemMode: 'AUTO',
@@ -82,7 +80,6 @@
       this.trends = {
         temp: { diff: 0.2, direction: 'up', text: '+0.2°C' },
         ph: { diff: -0.05, direction: 'down', text: '-0.05' },
-        waterLevel: { diff: -0.4, direction: 'down', text: '-0.4%' },
         light: { diff: 1.5, direction: 'up', text: '+1.5%' }
       };
 
@@ -93,9 +90,9 @@
       this.alerts = [
         {
           id: 'alt-101',
-          type: 'warning',
-          title: 'ระดับน้ำเริ่มลดลงต่ำกว่าเกณฑ์ปกติ',
-          message: 'ระดับน้ำลดลงถึง 68.5% (เกณฑ์ขั้นต่ำ 70%) กรุณาตรวจสอบระดับน้ำในบ่อเพาะเลี้ยง',
+          type: 'info',
+          title: 'ความเข้มแสงอยู่ในเกณฑ์เหมาะสม',
+          message: 'ความเข้มแสงเฉลี่ย 65% เหมาะสมต่อกระบวนการสังเคราะห์แสงของไข่ผำ',
           timestamp: new Date(Date.now() - 42 * 60000).toISOString(),
           resolved: true,
           resolvedAt: new Date(Date.now() - 30 * 60000).toISOString()
@@ -114,7 +111,7 @@
       // Recent Activity Log (latest 10)
       this.activities = [
         { id: 1, text: 'ระบบตรวจวัดข้อมูลเสถียร ทุกเซนเซอร์ทำงานปกติ', time: 'เมื่อสักครู่', type: 'info' },
-        { id: 2, text: 'เซนเซอร์อัลตราโซนิกตรวจพบระดับน้ำคงที่ 78.5%', time: '15 นาทีที่แล้ว', type: 'info' },
+        { id: 2, text: 'เซนเซอร์วัดแสง BH1750 ตรวจพบค่าความเข้มแสง 65%', time: '15 นาทีที่แล้ว', type: 'info' },
         { id: 3, text: 'เซนเซอร์วัดค่า pH ตรวจพบความสมดุลปกติ 6.95', time: '42 นาทีที่แล้ว', type: 'info' },
         { id: 4, text: 'ซิงค์ข้อมูลสถิติกับระบบคลาวด์สำเร็จ', time: '1 ชั่วโมงที่แล้ว', type: 'cloud' },
         { id: 5, text: 'ระบบตรวจสอบการเชื่อมต่อ Wi-Fi RSSI: -58 dBm ดีเยี่ยม', time: '2 ชั่วโมงที่แล้ว', type: 'wifi' }
@@ -207,7 +204,6 @@
 
       let temp = 27.5;
       let ph = 6.9;
-      let water = 78.5;
       let light = 60.0;
 
       for (let i = count - 1; i >= 0; i--) {
@@ -227,10 +223,6 @@
         }
         light = Math.max(0, Math.min(100, dailyLight));
 
-        // Water level natural slight fluctuation (76% - 82%)
-        water = 78.5 + Math.sin(hour / 4) * 2.2 + (Math.random() * 0.4 - 0.2);
-        water = Math.max(65, Math.min(95, water));
-
         // pH: slight fluctuation around 6.9 - 7.1
         ph = 6.92 + (Math.sin(hour / 3) * 0.15) + (Math.random() * 0.06 - 0.03);
 
@@ -239,7 +231,6 @@
           temp: parseFloat(temp.toFixed(1)),
           temperature: parseFloat(temp.toFixed(1)),
           ph: parseFloat(ph.toFixed(2)),
-          waterLevel: parseFloat(water.toFixed(1)),
           light: parseFloat(light.toFixed(1)),
           deviceStatus: 'Online',
           rssi: -58 + Math.floor(Math.random() * 4 - 2)
@@ -289,14 +280,7 @@
       newPh += (6.95 - newPh) * 0.02;
       newPh = parseFloat(Math.max(5.5, Math.min(8.5, newPh)).toFixed(2));
 
-      // 3. Water Level sensor fluctuation (Ultrasonic JSN-SR04T)
-      const waterNoise = (Math.random() - 0.5) * 0.15;
-      let newWater = this.current.waterLevel + waterNoise;
-      // Slight gentle pull towards 78.5%
-      newWater += (78.5 - newWater) * 0.01;
-      newWater = parseFloat(Math.max(60, Math.min(95, newWater)).toFixed(1));
-
-      // 4. Light Intensity (Optimal Wolffia: 50 - 80%)
+      // 3. Light Intensity (Optimal Wolffia: 50 - 80%)
       let baseLight = 0;
       if (hour >= 6 && hour <= 18) {
         baseLight = Math.sin(((hour - 6) / 12) * Math.PI) * 72;
@@ -307,7 +291,7 @@
       let newLight = baseLight + lightNoise;
       newLight = parseFloat(Math.max(0, Math.min(100, newLight)).toFixed(1));
 
-      // 5. RSSI & Ping
+      // 4. RSSI & Ping
       const newRssi = Math.min(-45, Math.max(-85, -58 + Math.floor((Math.random() - 0.5) * 6)));
       const newPing = Math.max(14, Math.min(65, 24 + Math.floor((Math.random() - 0.5) * 8)));
 
@@ -315,7 +299,6 @@
       const prevTemp = prev.temperature || prev.temp || newTemp;
       const tempDiff = parseFloat((newTemp - prevTemp).toFixed(1));
       const phDiff = parseFloat((newPh - prev.ph).toFixed(2));
-      const waterDiff = parseFloat((newWater - prev.waterLevel).toFixed(1));
       const lightDiff = parseFloat((newLight - prev.light).toFixed(1));
 
       this.trends = {
@@ -328,11 +311,6 @@
           diff: phDiff,
           direction: phDiff >= 0 ? 'up' : 'down',
           text: (phDiff >= 0 ? '+' : '') + phDiff
-        },
-        waterLevel: {
-          diff: waterDiff,
-          direction: waterDiff >= 0 ? 'up' : 'down',
-          text: (waterDiff >= 0 ? '+' : '') + waterDiff + '%'
         },
         light: {
           diff: lightDiff,
@@ -347,7 +325,6 @@
         temperature: newTemp,
         temp: newTemp,
         ph: newPh,
-        waterLevel: newWater,
         light: newLight,
         deviceStatus: 'Online',
         wifiStatus: 'Connected',
@@ -491,19 +468,7 @@
         }
       }
 
-      // 3. Water Level: handle ultrasonic error sentinel (-1.0 or out-of-range)
-      let rawWater = row.water_level !== undefined ? parseFloat(row.water_level) : (row.water !== undefined ? parseFloat(row.water) : (row.waterLevel !== undefined ? parseFloat(row.waterLevel) : NaN));
-      let newWater = prev.waterLevel;
-      let waterValid = true;
-      if (!isNaN(rawWater) && isFinite(rawWater)) {
-        if (rawWater < 0 || rawWater > 100) {
-          waterValid = false;
-        } else {
-          newWater = parseFloat(rawWater.toFixed(1));
-        }
-      }
-
-      // 4. Light: handle BH1750 error sentinel (-1.0)
+      // 3. Light: handle BH1750 error sentinel (-1.0)
       let rawLight = row.light !== undefined ? parseFloat(row.light) : (row.lux !== undefined ? parseFloat(row.lux) : NaN);
       let newLight = prev.light;
       let lightValid = true;
@@ -515,13 +480,13 @@
         }
       }
 
-      // 5. Pump status, Mode, and Safety Status from ESP32 Firmware V6
+      // 4. Pump status, Mode, and Safety Status from ESP32 Firmware V6
       let newPump = row.pump_status !== undefined ? Boolean(row.pump_status) : (row.pump !== undefined ? Boolean(row.pump) : Boolean(prev.pumpStatus));
       let newMode = row.system_mode || row.mode || prev.systemMode || 'AUTO';
       let rawSystemStatus = row.system_status || row.status || row.device_status || prev.systemStatus || 'NORMAL';
       let newDeviceStatus = (rawSystemStatus === 'NORMAL' || rawSystemStatus === 'Online') ? 'Online' : rawSystemStatus;
 
-      // 6. Network info
+      // 5. Network info
       const newRssi = row.rssi !== undefined ? parseInt(row.rssi) : prev.rssi;
       const newPing = row.ping !== undefined ? parseInt(row.ping) : prev.ping;
       const ts = row.created_at || new Date().toISOString();
@@ -533,13 +498,11 @@
       // Update Trends
       const tempDiff = parseFloat((newTemp - prev.temperature).toFixed(1));
       const phDiff = parseFloat((newPh - prev.ph).toFixed(2));
-      const waterDiff = parseFloat((newWater - prev.waterLevel).toFixed(1));
       const lightDiff = parseFloat((newLight - prev.light).toFixed(1));
 
       this.trends = {
         temp: { diff: tempDiff, direction: tempDiff >= 0 ? 'up' : 'down', text: (tempDiff >= 0 ? '+' : '') + tempDiff + '°C' },
         ph: { diff: phDiff, direction: phDiff >= 0 ? 'up' : 'down', text: (phDiff >= 0 ? '+' : '') + phDiff },
-        waterLevel: { diff: waterDiff, direction: waterDiff >= 0 ? 'up' : 'down', text: (waterDiff >= 0 ? '+' : '') + waterDiff + '%' },
         light: { diff: lightDiff, direction: lightDiff >= 0 ? 'up' : 'down', text: (lightDiff >= 0 ? '+' : '') + lightDiff + (newLight > 100 ? ' lx' : '%') }
       };
 
@@ -554,7 +517,6 @@
         temperature: newTemp,
         temp: newTemp,
         ph: newPh,
-        waterLevel: newWater,
         light: newLight,
         pumpStatus: newPump,
         systemMode: newMode,
@@ -566,7 +528,6 @@
         timestamp: ts,
         tempValid,
         phValid,
-        waterValid,
         lightValid
       };
 
@@ -581,24 +542,20 @@
       // Natural sensor electrical noise & microscopic thermal variation around current baseline
       const tempJitter = (Math.random() - 0.5) * 0.12;
       const phJitter = (Math.random() - 0.5) * 0.02;
-      const waterJitter = (Math.random() - 0.5) * 0.15;
       const lightJitter = (Math.random() - 0.5) * 0.8;
 
       let t = (this.current.temperature || 31.45) + tempJitter;
       let p = (this.current.ph || 7.15) + phJitter;
-      let w = (this.current.waterLevel || 84.5) + waterJitter;
       let l = (this.current.light || 72.0) + lightJitter;
 
       // Bound within realistic cultivation limits
       t = parseFloat(Math.max(20, Math.min(38, t)).toFixed(1));
       p = parseFloat(Math.max(4.0, Math.min(10.0, p)).toFixed(2));
-      w = parseFloat(Math.max(50, Math.min(100, w)).toFixed(1));
       l = parseFloat(Math.max(0, Math.min(100, l)).toFixed(1));
 
       this.current.temperature = t;
       this.current.temp = t;
       this.current.ph = p;
-      this.current.waterLevel = w;
       this.current.light = l;
       this.current.timestamp = new Date().toISOString();
 
@@ -612,11 +569,6 @@
       this.trends.ph.diff = pDiff;
       this.trends.ph.direction = pDiff >= 0 ? 'up' : 'down';
       this.trends.ph.text = (pDiff >= 0 ? '+' : '') + pDiff;
-
-      const wDiff = parseFloat(waterJitter.toFixed(1));
-      this.trends.waterLevel.diff = wDiff;
-      this.trends.waterLevel.direction = wDiff >= 0 ? 'up' : 'down';
-      this.trends.waterLevel.text = (wDiff >= 0 ? '+' : '') + wDiff + '%';
 
       const lDiff = parseFloat(lightJitter.toFixed(1));
       this.trends.light.diff = lDiff;
@@ -802,7 +754,6 @@
         temperature: customData.temperature !== undefined ? customData.temperature : this.current.temperature,
         ph: customData.ph !== undefined ? customData.ph : this.current.ph,
         light: customData.light !== undefined ? customData.light : this.current.light,
-        water_level: customData.waterLevel !== undefined ? customData.waterLevel : this.current.waterLevel,
         pump_status: customData.pump_status !== undefined ? customData.pump_status : Boolean(this.current.pumpStatus),
         system_mode: customData.system_mode || this.current.systemMode || 'AUTO',
         system_status: customData.system_status || this.current.systemStatus || 'NORMAL'
@@ -817,7 +768,6 @@
             device_id: customData.deviceId || this.device.deviceId,
             temperature: customData.temperature !== undefined ? customData.temperature : this.current.temperature,
             ph: customData.ph !== undefined ? customData.ph : this.current.ph,
-            water_level: customData.waterLevel !== undefined ? customData.waterLevel : this.current.waterLevel,
             light: customData.light !== undefined ? customData.light : this.current.light,
             rssi: customData.rssi !== undefined ? customData.rssi : this.current.rssi,
             device_status: customData.deviceStatus || 'Online'
@@ -894,7 +844,6 @@
             temp: parseFloat(r.temperature !== undefined ? r.temperature : (r.temp !== undefined ? r.temp : 28)),
             temperature: parseFloat(r.temperature !== undefined ? r.temperature : (r.temp !== undefined ? r.temp : 28)),
             ph: parseFloat(r.ph || 7.0),
-            waterLevel: parseFloat(r.water_level !== undefined ? r.water_level : (r.waterLevel !== undefined ? r.waterLevel : 78)),
             light: parseFloat(r.light || 65),
             pumpStatus: r.pump_status !== undefined ? Boolean(r.pump_status) : false,
             systemMode: r.system_mode || 'AUTO',
@@ -944,13 +893,6 @@
       } else {
         this.autoResolveAlert('alt-ph-low');
         this.autoResolveAlert('alt-ph-high');
-      }
-
-      // Water Level alert check
-      if (c.waterLevel < th.waterLevel.min) {
-        this.raiseAlert('alt-water-low', 'critical', 'ระดับน้ำในบ่อเพาะเลี้ยงต่ำวิกฤต', `ระดับน้ำลดลงเหลือ ${c.waterLevel}% (เกณฑ์ต่ำสุด ${th.waterLevel.min}%) กรุณาตรวจสอบการเติมน้ำ`);
-      } else {
-        this.autoResolveAlert('alt-water-low');
       }
 
       // Light alert check
@@ -1050,8 +992,7 @@
         if (count === 0) {
           const fallback = (key === 'temp' || key === 'temperature') ? (this.current.temperature || 28.4)
             : (key === 'ph' ? (this.current.ph || 6.95)
-            : (key === 'waterLevel' ? (this.current.waterLevel || 78.5)
-            : (this.current.light || 65.0)));
+            : (this.current.light || 65.0));
           return {
             avg: parseFloat(fallback.toFixed(2)),
             min: parseFloat(fallback.toFixed(2)),
@@ -1099,7 +1040,6 @@
 
       const tempStats = calcStats('temp');
       const phStats = calcStats('ph');
-      const waterStats = calcStats('waterLevel');
       const lightStats = calcStats('light');
 
       // Weekly breakdown simulation based on history
@@ -1110,7 +1050,6 @@
           day: day,
           avgTemp: parseFloat((tempStats.avg + offset).toFixed(1)),
           avgPh: parseFloat((phStats.avg + (offset * 0.05)).toFixed(2)),
-          avgWater: parseFloat((waterStats.avg - (idx * 0.4)).toFixed(1)),
           avgLight: parseFloat((lightStats.avg + (offset * 1.5)).toFixed(1)),
           growthIndex: 'ดีเยี่ยม (95%)'
         };
@@ -1120,7 +1059,6 @@
         count: dataset.length,
         temp: tempStats,
         ph: phStats,
-        water: waterStats,
         light: lightStats,
         weekly: weeklySummary
       };
@@ -1149,12 +1087,11 @@
 
       const tempScore = scoreParam(c.temperature, th.temp.min, th.temp.max);
       const phScore = scoreParam(c.ph, th.ph.min, th.ph.max);
-      const waterScore = scoreParam(c.waterLevel, th.waterLevel.min, th.waterLevel.max);
       const lightScore = scoreParam(c.light, th.light.min, th.light.max);
 
-      // Weighted average: Temp (30%), pH (30%), Water (20%), Light (20%)
+      // Weighted average: Temp (40%), pH (35%), Light (25%)
       const totalScore = Math.round(
-        tempScore * 0.3 + phScore * 0.3 + waterScore * 0.2 + lightScore * 0.2
+        tempScore * 0.40 + phScore * 0.35 + lightScore * 0.25
       );
 
       let statusText = 'ยอดเยี่ยม (Optimal Growth)';
@@ -1174,7 +1111,6 @@
         components: {
           temp: Math.round(tempScore),
           ph: Math.round(phScore),
-          water: Math.round(waterScore),
           light: Math.round(lightScore)
         }
       };
@@ -1203,15 +1139,6 @@
           type: 'warning'
         });
       }
-
-      // Water Level & Evaporation insight
-      const hourlyEvap = 1.1;
-      insights.push({
-        icon: 'fa-droplet',
-        title: 'การประเมินระดับน้ำในบ่อเพาะเลี้ยง',
-        desc: `ระดับน้ำปัจจุบันอยู่ที่ ${c.waterLevel}% อยู่ในเกณฑ์ที่เหมาะสมสำหรับการเจริญเติบโต (${th.waterLevel.min}% - ${th.waterLevel.max}%) อัตราการระเหยปกติ`,
-        type: 'info'
-      });
 
       // pH Balance insight
       if (stats.ph.avg >= 6.8 && stats.ph.avg <= 7.2) {
@@ -1269,17 +1196,6 @@
             note: 'ค่าความเป็นกรด-ด่างหลุดเกณฑ์'
           });
         }
-        if (d.waterLevel < th.waterLevel.min) {
-          anomalies.push({
-            id: `anom-water-${idx}`,
-            timestamp: d.timestamp,
-            parameter: 'Water Level',
-            value: `${d.waterLevel}%`,
-            expected: `${th.waterLevel.min} - ${th.waterLevel.max}%`,
-            severity: 'Critical',
-            note: 'ระดับน้ำต่ำเกินไป'
-          });
-        }
       });
 
       return anomalies.slice(-15).reverse(); // latest 15 anomalies
@@ -1287,13 +1203,12 @@
 
     // CSV Export
     exportCsv(filename = 'smart_wolffia_telemetry.csv') {
-      const headers = ['Timestamp', 'Device_ID', 'Temperature_C', 'pH', 'Water_Level_Percent', 'Light_Percent', 'Device_Status'];
+      const headers = ['Timestamp', 'Device_ID', 'Temperature_C', 'pH', 'Light_Percent', 'Device_Status'];
       const rows = this.history.map(d => [
         `"${d.timestamp}"`,
         `"${this.device.deviceId}"`,
         d.temp,
         d.ph,
-        d.waterLevel,
         d.light,
         `"${d.deviceStatus}"`
       ]);

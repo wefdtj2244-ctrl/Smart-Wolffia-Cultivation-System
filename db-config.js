@@ -50,7 +50,6 @@ const WOLFFIA_SUPABASE_CONFIG = {
  *   device_id TEXT DEFAULT 'ESP32-WOLFFIA-01' NOT NULL,
  *   temperature NUMERIC(4, 2) NOT NULL,
  *   ph NUMERIC(3, 2) NOT NULL,
- *   water_level NUMERIC(4, 1) NOT NULL,
  *   light NUMERIC(4, 1) NOT NULL,
  *   rssi INTEGER DEFAULT -58,
  *   device_status TEXT DEFAULT 'Online'
