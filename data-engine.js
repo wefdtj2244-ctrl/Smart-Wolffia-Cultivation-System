@@ -966,6 +966,8 @@
             }
           }
           if (typeof v === 'number' && !isNaN(v)) {
+            if ((key === 'temp' || key === 'temperature') && (v === -999 || v < -40 || v > 125)) return;
+            if (key === 'light' && (v === -1 || v < 0)) return;
             sum += v;
             count++;
             if (v < min) min = v;
@@ -975,9 +977,9 @@
 
         // Safe fallback if count is 0
         if (count === 0) {
-          const fallback = (key === 'temp' || key === 'temperature') ? (this.current.temperature || 28.4)
+          const fallback = (key === 'temp' || key === 'temperature') ? ((this.current.tempValid && this.current.temperature > -40) ? this.current.temperature : 28.4)
             : (key === 'ph' ? (this.current.ph || 6.95)
-            : (this.current.light || 65.0));
+            : ((this.current.lightValid && this.current.light >= 0) ? this.current.light : 65.0));
           return {
             avg: parseFloat(fallback.toFixed(2)),
             min: parseFloat(fallback.toFixed(2)),
@@ -999,6 +1001,8 @@
             }
           }
           if (typeof v === 'number' && !isNaN(v)) {
+            if ((key === 'temp' || key === 'temperature') && (v === -999 || v < -40 || v > 125)) return;
+            if (key === 'light' && (v === -1 || v < 0)) return;
             varianceSum += Math.pow(v - avg, 2);
           }
         });
@@ -1011,7 +1015,12 @@
               v = d.temp !== undefined ? d.temp : d.temperature;
             }
           }
-          return typeof v === 'number' && !isNaN(v) ? v : (avg || 0);
+          if (typeof v === 'number' && !isNaN(v)) {
+            if ((key === 'temp' || key === 'temperature') && (v === -999 || v < -40 || v > 125)) return avg || 28.4;
+            if (key === 'light' && (v === -1 || v < 0)) return avg || 65.0;
+            return v;
+          }
+          return avg || 0;
         });
 
         return {

@@ -697,19 +697,7 @@
     renderSparkline('chart-stat-spark-ph', stats.ph.trend, '#6366f1');
     renderSparkline('chart-stat-spark-light', stats.light.trend, '#d97706');
 
-    // Weekly Summary Table
-    const weeklyBody = document.getElementById('stat-weekly-table-body');
-    if (weeklyBody) {
-      weeklyBody.innerHTML = stats.weekly.map(w => `
-        <tr>
-          <td><strong>${w.day}</strong></td>
-          <td>${w.avgTemp} °C</td>
-          <td>${w.avgPh}</td>
-          <td>${w.avgLight}%</td>
-          <td><span class="status-badge normal">${w.growthIndex}</span></td>
-        </tr>
-      `).join('');
-    }
+
   }
 
   // ========================================================================
