@@ -101,6 +101,9 @@
   }
 
   function switchView(viewName) {
+    if (!document.getElementById(`view-${viewName}`)) {
+      viewName = 'dashboard';
+    }
     currentView = viewName;
     window.location.hash = viewName;
 
@@ -202,9 +205,6 @@
         break;
       case 'monitoring':
         renderMonitoringView(engine);
-        break;
-      case 'sensors':
-        renderSensorsView(engine);
         break;
       case 'history':
         renderHistoryView(engine);
@@ -533,53 +533,7 @@
     ctx.stroke();
   }
 
-  // ========================================================================
-  // 3. SENSORS VIEW
-  // ========================================================================
-  function renderSensorsView(engine) {
-    const c = engine.current;
-    const th = engine.thresholds;
-    const stats = engine.calculateStatistics(72);
 
-    if (c.tempValid === false || c.temperature === -999 || c.temperature === null) {
-      setText('sens-temp-val', `-999.0 °C (รอเซนเซอร์)`);
-    } else {
-      setText('sens-temp-val', `${c.temperature.toFixed(1)} °C`);
-    }
-
-    setText('sens-ph-val', (typeof c.ph === 'number') ? `${c.ph.toFixed(2)} pH` : '-- pH');
-
-    if (c.lightValid === false || c.light === -1 || c.light === null) {
-      setText('sens-light-val', `-1.0 lux (รอเซนเซอร์)`);
-    } else {
-      setText('sens-light-val', `${c.light.toFixed(1)} %`);
-    }
-
-    setText('sens-temp-range', `${th.temp.min.toFixed(1)} - ${th.temp.max.toFixed(1)} °C`);
-    setText('sens-ph-range', `${th.ph.min.toFixed(1)} - ${th.ph.max.toFixed(1)}`);
-    setText('sens-light-range', `${th.light.min} - ${th.light.max} %`);
-
-    const tempMin = (stats.temp && typeof stats.temp.min === 'number' && !isNaN(stats.temp.min)) ? stats.temp.min : 26.2;
-    const tempAvg = (stats.temp && typeof stats.temp.avg === 'number' && !isNaN(stats.temp.avg)) ? stats.temp.avg : 28.3;
-    const tempMax = (stats.temp && typeof stats.temp.max === 'number' && !isNaN(stats.temp.max)) ? stats.temp.max : 31.0;
-
-    setText('sens-temp-min', `${tempMin.toFixed(1)}°C`);
-    setText('sens-temp-avg', `${tempAvg.toFixed(1)}°C`);
-    setText('sens-temp-max', `${tempMax.toFixed(1)}°C`);
-
-    setText('sens-ph-min', `${stats.ph.min}`);
-    setText('sens-ph-avg', `${stats.ph.avg}`);
-    setText('sens-ph-max', `${stats.ph.max}`);
-
-    setText('sens-light-min', `${stats.light.min}%`);
-    setText('sens-light-avg', `${stats.light.avg}%`);
-    setText('sens-light-max', `${stats.light.max}%`);
-
-    // Sparklines
-    renderSparkline('spark-temp', stats.temp.trend, '#ef4444');
-    renderSparkline('spark-ph', stats.ph.trend, '#6366f1');
-    renderSparkline('spark-light', stats.light.trend, '#d97706');
-  }
 
   // ========================================================================
   // 4. HISTORY VIEW

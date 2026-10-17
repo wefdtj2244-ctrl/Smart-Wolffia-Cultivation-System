@@ -97,9 +97,7 @@
           <li class="dashboard-menu-item" data-view="monitoring">
             <i class="fa-solid fa-wave-square"></i> มอนิเตอร์เรียลไทม์ (Monitoring)
           </li>
-          <li class="dashboard-menu-item" data-view="sensors">
-            <i class="fa-solid fa-microchip"></i> เซนเซอร์ทั้งหมด (Sensors)
-          </li>
+
           <li class="dashboard-menu-item" data-view="history">
             <i class="fa-solid fa-clock-rotate-left"></i> ประวัติข้อมูลย้อนหลัง (History)
           </li>
@@ -528,118 +526,7 @@
 
       </section>
 
-      <!-- ====================================================================
-           3. VIEW: SENSORS (Sensor Management)
-           ==================================================================== -->
-      <section id="view-sensors" class="dashboard-section" style="display:none">
-        
-        <div class="dashboard-header-bar">
-          <div class="header-title-box">
-            <h2><i class="fa-solid fa-microchip" style="color:var(--primary)"></i> การจัดการเซนเซอร์ตรวจวัด (Sensors Management)</h2>
-            <p>ตรวจสอบสถานะการเชื่อมต่อ ฮาร์ดแวร์เซนเซอร์แต่ละตัว สถิติย้อนหลัง 24 ชม. และ Sparkline</p>
-          </div>
-        </div>
 
-        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(280px, 1fr)); gap:1.25rem">
-          
-          <!-- Sensor 1: DS18B20 Temp Sensor -->
-          <div class="card">
-            <div class="card-header">
-              <div class="card-title" style="font-size:0.95rem">
-                <i class="fa-solid fa-temperature-three-quarters" style="color:#ef4444"></i> เซนเซอร์อุณหภูมิน้ำ (DS18B20)
-              </div>
-              <span class="status-badge normal"><span class="pulse-dot online"></span> Connected</span>
-            </div>
-            <div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:0.75rem">
-              <div>
-                <span style="font-size:0.75rem; color:var(--text-muted)">ค่าที่อ่านได้ปัจจุบัน</span>
-                <div style="font-size:1.8rem; font-weight:700; font-family:var(--font-heading)" id="sens-temp-val">28.4 °C</div>
-              </div>
-              <div style="text-align:right">
-                <span style="font-size:0.75rem; color:var(--text-muted)">ช่วงปกติที่ตั้งไว้</span>
-                <div style="font-size:0.85rem; font-weight:600; color:var(--primary)" id="sens-temp-range">25.0 - 32.0 °C</div>
-              </div>
-            </div>
-            <!-- 24h Min/Max/Avg -->
-            <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:0.5rem; background:var(--bg-surface-subtle); padding:0.6rem; border-radius:var(--radius-md); font-size:0.75rem; margin-bottom:0.75rem; text-align:center">
-              <div><span style="color:var(--text-muted)">ต่ำสุด (Min)</span><div style="font-weight:700" id="sens-temp-min">26.1°C</div></div>
-              <div><span style="color:var(--text-muted)">เฉลี่ย (Avg)</span><div style="font-weight:700" id="sens-temp-avg">28.3°C</div></div>
-              <div><span style="color:var(--text-muted)">สูงสุด (Max)</span><div style="font-weight:700" id="sens-temp-max">31.2°C</div></div>
-            </div>
-            <!-- Sparkline -->
-            <div style="height:60px">
-              <canvas id="spark-temp"></canvas>
-            </div>
-            <div style="font-size:0.72rem; color:var(--text-muted); margin-top:0.5rem">
-              GPIO Pin: 4 (One-Wire Bus) • เซ็นเซอร์กันน้ำสเตนเลสสตีล
-            </div>
-          </div>
-
-          <!-- Sensor 2: pH-4502C Sensor -->
-          <div class="card">
-            <div class="card-header">
-              <div class="card-title" style="font-size:0.95rem">
-                <i class="fa-solid fa-flask-vial" style="color:#6366f1"></i> เซนเซอร์วัดกรด-ด่าง (pH-4502C)
-              </div>
-              <span class="status-badge normal"><span class="pulse-dot online"></span> Connected</span>
-            </div>
-            <div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:0.75rem">
-              <div>
-                <span style="font-size:0.75rem; color:var(--text-muted)">ค่าที่อ่านได้ปัจจุบัน</span>
-                <div style="font-size:1.8rem; font-weight:700; font-family:var(--font-heading)" id="sens-ph-val">6.95 pH</div>
-              </div>
-              <div style="text-align:right">
-                <span style="font-size:0.75rem; color:var(--text-muted)">ช่วงปกติที่ตั้งไว้</span>
-                <div style="font-size:0.85rem; font-weight:600; color:var(--primary)" id="sens-ph-range">6.5 - 7.5</div>
-              </div>
-            </div>
-            <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:0.5rem; background:var(--bg-surface-subtle); padding:0.6rem; border-radius:var(--radius-md); font-size:0.75rem; margin-bottom:0.75rem; text-align:center">
-              <div><span style="color:var(--text-muted)">ต่ำสุด (Min)</span><div style="font-weight:700" id="sens-ph-min">6.81</div></div>
-              <div><span style="color:var(--text-muted)">เฉลี่ย (Avg)</span><div style="font-weight:700" id="sens-ph-avg">6.96</div></div>
-              <div><span style="color:var(--text-muted)">สูงสุด (Max)</span><div style="font-weight:700" id="sens-ph-max">7.18</div></div>
-            </div>
-            <div style="height:60px">
-              <canvas id="spark-ph"></canvas>
-            </div>
-            <div style="font-size:0.72rem; color:var(--text-muted); margin-top:0.5rem">
-              GPIO Pin: 34 (ADC1 Channel 6) • หัวโพรบแก้วอิเล็กโทรดพร้อมวงจรกรอง
-            </div>
-          </div>
-
-          <!-- Sensor 3: BH1750 Light Sensor -->
-          <div class="card">
-            <div class="card-header">
-              <div class="card-title" style="font-size:0.95rem">
-                <i class="fa-solid fa-sun" style="color:#d97706"></i> เซนเซอร์วัดแสง (BH1750 I2C)
-              </div>
-              <span class="status-badge normal"><span class="pulse-dot online"></span> Connected</span>
-            </div>
-            <div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:0.75rem">
-              <div>
-                <span style="font-size:0.75rem; color:var(--text-muted)">ค่าที่อ่านได้ปัจจุบัน</span>
-                <div style="font-size:1.8rem; font-weight:700; font-family:var(--font-heading)" id="sens-light-val">65.0 %</div>
-              </div>
-              <div style="text-align:right">
-                <span style="font-size:0.75rem; color:var(--text-muted)">ช่วงปกติที่ตั้งไว้</span>
-                <div style="font-size:0.85rem; font-weight:600; color:var(--primary)" id="sens-light-range">50 - 80 %</div>
-              </div>
-            </div>
-            <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:0.5rem; background:var(--bg-surface-subtle); padding:0.6rem; border-radius:var(--radius-md); font-size:0.75rem; margin-bottom:0.75rem; text-align:center">
-              <div><span style="color:var(--text-muted)">ต่ำสุด (Min)</span><div style="font-weight:700" id="sens-light-min">2.0%</div></div>
-              <div><span style="color:var(--text-muted)">เฉลี่ย (Avg)</span><div style="font-weight:700" id="sens-light-avg">58.4%</div></div>
-              <div><span style="color:var(--text-muted)">สูงสุด (Max)</span><div style="font-weight:700" id="sens-light-max">76.5%</div></div>
-            </div>
-            <div style="height:60px">
-              <canvas id="spark-light"></canvas>
-            </div>
-            <div style="font-size:0.72rem; color:var(--text-muted); margin-top:0.5rem">
-              GPIO Pin: 21 (SDA) / 22 (SCL) • ดิจิทัลเซ็นเซอร์วัดลักซ์ความละเอียดสูง
-            </div>
-          </div>
-
-        </div>
-
-      </section>
 
       <!-- ====================================================================
            4. VIEW: HISTORY (Data Management)
@@ -1449,9 +1336,9 @@
   <div class="toast-container" id="toast-container"></div>
 
   <!-- Scripts with cache busting query strings -->
-  <script src="db-config.js?v=20261011-11"></script>
-  <script src="data-engine.js?v=20261011-12"></script>
-  <script src="app.js?v=20261011-12"></script>
+  <script src="db-config.js?v=20261017-01"></script>
+  <script src="data-engine.js?v=20261017-01"></script>
+  <script src="app.js?v=20261017-01"></script>
 
   <!-- Inline Failsafe: Guarantees input values are always preserved and filled -->
   <script>
